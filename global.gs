@@ -49,3 +49,7 @@ function get_nr(name,exact = false) {
   }
   return nrs
 }
+
+function get_full_name(){
+  return `${get_prop_value("category",'d')}-${get_prop_value("callname",'d')}`
+}

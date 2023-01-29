@@ -110,6 +110,7 @@ class Rm {
     this.pf_num = pf_num;
     this.rm_num = rm_num;
 
+    this.rm_loc;
     this.len_st = null;
     this.roster = null;
     this.summary= {"scr":null,"fw":null}
@@ -123,9 +124,9 @@ class Rm {
 
   pharse(lv = 0){
     if(this.is_pharsed()){return}
-    this.len_st = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_LEN`).getValue()
+    this.rm_loc = this.ss.getRange(`DRAW_RM${this.rm_num}`).getValue();
+    this.len_st = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_LEN`).getValue();
 
-    //TODO: pharse summary / roster
     var summary_raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_SUMMARY`).getValues();
     this.roster = slice_2d(summary_raw,[0,0],[3,1]);
 
@@ -189,8 +190,10 @@ class St {
         "d":[]
       },
       "rej":[],
+      "acc":null,
       "nrej":[],
-      "acc":null
+      "penalty":null,//true if weight penalty was inflicted.
+      "weight":null  //calculated reporter weight
     }
 
     this.raw       = null;
@@ -204,6 +207,13 @@ class St {
     // Logger.log(string_2d(this.raw,"RAW",0,true,6))
     this.pharse_challenge();
     this.result = slice_2d(this.raw,[1,2],[4,21])
+    for(var idx = 0;idx<this.result.length;idx++){this.result[idx].splice(16,3);}
+    this.result[0][0] = `Team`;
+    this.result[0][1] = 'Name';
+    this.result[1][0] = `Rep.[${this.result[1][0]}]`;
+    this.result[2][0] = `Opp.[${this.result[2][0]}]`;
+    this.result[3][0] = `Rev.[${this.result[3][0]}]`;
+
   }
 
   pharse_challenge(){ // used the "-1" to help with compatibility with 0-index and 1-index
@@ -215,8 +225,11 @@ class St {
     this.challenge["constraints"]["d"] = this.raw[7-1][19-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
 
     this.challenge["rej"] = this.raw[1-1].slice(6-1,16-1+1).map(str => Number(str)).filter(num => num != 0);
-    this.challenge["nrej"]= this.challenge["constraints"]["a"].length + this.challenge["rej"].length
     this.challenge["acc"] = this.raw[1-1][18-1]
+
+    this.challenge["nrej"]= this.challenge["constraints"]["a"].length + this.challenge["rej"].length
+    this.challenge["weight"] = this.raw[2][19];
+    this.challenge["penalty"] = this.challenge["nrej"] > this.ss.getRange("RULE_SCR_AR").getValue();
   }
 
   interpret(lv=0){ // bottom level, no interpretation required
@@ -231,15 +244,44 @@ class St {
     if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
     // Logger.log([this.roster,this.summary["scr"],this.summary["fw"]])
 
-    output += `\n${string_2d(this.raw,"RAW",3,true,5)}`
+    // output += `\n${string_2d(this.raw,"RAW",3,true,5)}`
+    output += `\n${string_2d(this.result,"RESULT",3,true,6)}`
 
     output += `\n\t\t\tChallenge:`
     output += `\n\t\t\t  Constraints: [B:${this.challenge["constraints"]["B"]}], [P:${this.challenge["constraints"]["P"]}], [a:${this.challenge["constraints"]["a"]}], [b:${this.challenge["constraints"]["b"]}], [c:${this.challenge["constraints"]["c"]}], [d:${this.challenge["constraints"]["d"]}]`
-    output += `\n\t\t\t  Rejected:[${this.challenge["rej"]}] (total of ${this.challenge["nrej"]})`
+    output += `\n\t\t\t  Rejected:[${this.challenge["rej"]}] (total of ${this.challenge["nrej"]}), penalty:${this.challenge["penalty"]} (weight: ${this.challenge["weight"]})`
     output += `\n\t\t\t  Accepted: ${this.challenge["acc"]}`
     return output
   }
   
 }
 
+// Separate class defined for pharsing leaderboard ("BOARD") information
+class Board{
+  constructor(){
+    this.ss = get_ss_spreadsheet();
+    this.content_num = null;
+    this.content_rank= null;
+    this.current_pf = null;
+  }
+  
+  is_pharsed(){return this.current_pf != null;}
 
+  pharse(){
+    if(this.is_pharsed()){return;}
+    this.current_pf = this.ss.getRange("BOARD_PF").getValue();
+    this.content_num= this.ss.getRange("BOARD_CONTENT_NUM").getValues();
+    this.content_rank=this.ss.getRange("BOARD_CONTENT_RANK").getValues();
+  }
+
+  interpret(){return this.toString();}
+
+  toString(){
+    var output = `Board`
+    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+    // Logger.log([this.roster,this.summary["scr"],this.summary["fw"]])
+    output += `\t[~ PF${this.current_pf}]`
+    output += `\n${multistring_2d([this.content_num,this.content_rank],["BY NUMBER","BY RANK"],0,true,6)}`
+    return output    
+  }
+}
