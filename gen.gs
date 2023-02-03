@@ -38,7 +38,6 @@ function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName(
     unit_nrs_specs[name.slice(unit_prefix.length)] = [range.getRow() - origin_row,range.getColumn() - origin_col,range.getNumRows(),range.getNumColumns()]
   }
   // Logger.log(unit_nrs_specs)
-
   //calculate origins with their prefixes
   var origins = {}
   for(var pf = 1; pf <= pfs ; pf++){
@@ -49,6 +48,7 @@ function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName(
   }
   // Logger.log(origins)
 
+  Logger.log("[GEN-POPULATE] Specs Gathered")
   // add columns
   sheet_data.insertColumnsAfter(sheet_data.getLastColumn(),unit_cols*(pfs-1));
 
@@ -74,6 +74,7 @@ function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName(
     current_pf += 1;
   }
 
+
   // add rows
   sheet_data.insertRowsAfter(sheet_data.getLastRow(),unit_rows*(rms-1));
   
@@ -94,6 +95,7 @@ function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName(
     current_row += unit_rows;
     current_rm += 1
   }
+  Logger.log("[GEN-POPULATE] Designations Set")
 
   // copy&paste format and content + add named ranges based on unit_nrs_specs
   for(let [prefix,origin] of Object.entries(origins)){
@@ -111,6 +113,8 @@ function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName(
       ss.setNamedRange(full_name,range);
     }
   }
+  Logger.log("[GEN-POPULATE] Contents / Named Ranges Copied")
+
 
   // Set Conditional Formatting
   var cf_rules = sheet_data.getConditionalFormatRules();
@@ -118,7 +122,7 @@ function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName(
   var cf_ranges = []
   for(var nr of cf_nrs){
     cf_ranges.push(nr.getRange());
-    Logger.log(nr.getName());
+    // Logger.log(nr.getName());
   }
 
   cf_rules.push(SpreadsheetApp.newConditionalFormatRule()
@@ -131,10 +135,8 @@ function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName(
 
   sheet_data.setConditionalFormatRules(cf_rules);
 
-  // refresh cell values after named range definition
-  SpreadsheetApp.flush()
-  refresh_calc()
-  SpreadsheetApp.flush()
+  Logger.log("[GEN-POPULATE] Conditoinal Formatting Set")
+
 }
 
 function unpopulate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName("DATA")){
@@ -164,12 +166,18 @@ function unpopulate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByNam
     }
   }
 
+  Logger.log("[GEN-UNPOPULATE] NRs Removed")
+
   // delete columns / Rows
   sheet_data.deleteColumns(origin_col+unit_cols, sheet_data.getLastColumn() - (origin_col+unit_cols)+1);
   sheet_data.deleteRows   (origin_row+unit_rows, sheet_data.getLastRow()    - (origin_row+unit_rows)+1);
+  Logger.log("[GEN-UNPOPULATE] Contents Removed")
+
 }
 
 function repopulate_data(){
   unpopulate_data();
+  Logger.log("[GEN-REPOPULATE] Unpopulate Complete");
   populate_data();
+  Logger.log("[GEN-REPOPULATE] Populate Complete.")
 }

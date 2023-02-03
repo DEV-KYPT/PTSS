@@ -2,6 +2,48 @@ function slice_2d(array=[[]],idx_s = [0,0],idx_e = [array.length,array[0].length
   return array.slice(idx_s[0],idx_e[0]+1).map(row => row.slice(idx_s[1],idx_e[1]+1))
 }
 
+function clear_2d(array=[[]],idx_s = [0,0],idx_e = [array.length,array[0].length]){
+  for(var idx_row = idx_s[0];idx_row <= idx_e[0];idx_row++){
+    for(var idx_col = idx_s[1];idx_col <= idx_e[1];idx_col++){
+      array[idx_row][idx_col] = "";
+    }
+  }
+  return array
+}
+
+function attatch_2d(arrays=[[[]],[['a','b','c'],['d','e','f']],[[]]],fill_char = ""){
+  var max_rows = 0;
+  for(var arr of arrays){
+    if(arr.length > max_rows){max_rows = arr.length;}
+  }
+  var resized_arrays = [];
+  for(var arr of arrays){resized_arrays.push(resize_2d(arr,[max_rows,undefined],fill_char));}
+  Logger.log(resized_arrays)
+  var output_array = [];
+  for(var idx_row = 0;idx_row<max_rows;idx_row++){
+    output_array.push([]);
+    for(var arr of resized_arrays){
+      output_array[idx_row] = output_array[idx_row].concat(arr[idx_row]);
+    }
+  }
+  return output_array
+}
+
+function resize_2d(array = [[]],size = [undefined,undefined],fill_char = ""){
+  var row = size[0];
+  var col = size[1];
+  if(size[0] == undefined){row = array.length;}
+  if(size[1] == undefined){col = array[0].length;}
+  if(row > array.length){array = array.concat(Array(row-array.length).fill([]));}
+  else if(row< array.length){array = array.slice(0,row)}
+  for(var idx_row = 0;idx_row<row;idx_row++ ){
+    // Logger.log(array[idx_row])
+    if(col > array[idx_row].length){array[idx_row] = array[idx_row].concat(Array(col-array[idx_row].length).fill(fill_char));}
+    else if (col < array[idx_row].length){array[idx_row] = array[idx_row].slice(0,col);}
+  }
+  return array
+}
+
 function string_2d(array=[[null]],name='',pre_tabs = 0,output_dims = false,max_size = 0){
   var maxlen = 0;
   for(var row of array){for(var entry of row){if(entry.toString().length > maxlen){maxlen = entry.toString().length;}}}
@@ -71,3 +113,42 @@ function multistring_2d(arrays = [[[]],[[]]],names = undefined,pre_tabs = 0,outp
 
   return output
 }
+
+function make_relative(range = SpreadsheetApp.getActiveRange()){
+  var f_start = range.getFormulas();
+  var count = 0
+  for(var idx_row = 1;idx_row <= range.getNumRows();idx_row++){
+    for(var idx_col = 1;idx_col <= range.getNumColumns();idx_col++){
+      if(f_start[idx_row-1][idx_col-1] == ""){continue;}
+      if(f_start[idx_row-1][idx_col-1].includes("$")){
+        range.getCell(idx_row,idx_col).setFormula(f_start[idx_row-1][idx_col-1].replace("$",""));
+        count += 1;
+      }
+    }
+  }
+  Logger.log(`${count} Formulas edited.`)
+  return count
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -285,3 +285,13 @@ class Board{
     return output    
   }
 }
+
+// Separate class defined for pharsing draw ("DRAW") information
+class Draw{
+  //TODO
+}
+
+// Separate class defined for pharsing selection verdict ("SELECT") information
+class Select{
+  //TODO
+}

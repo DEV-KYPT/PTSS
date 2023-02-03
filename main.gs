@@ -22,9 +22,9 @@ function main(){
   // Logger.log(""+s)
 
   /////////////////////////////////////////////////////////////
-  var b = new Board()
-  b.pharse()
-  Logger.log(""+b)
+  // var b = new Board()
+  // b.pharse()
+  // Logger.log(""+b)
 
   /////////////////////////////////////////////////////////////
   // var array1 = [
@@ -44,5 +44,8 @@ function main(){
   // Logger.log(multistring_2d([array1,array2],['A','B'],3,true,2))
 
   /////////////////////////////////////////////////////////////
-  // Logger.log(String(1))
+  // a = [["1"],[2],[3]];
+  // b = [["a","b","c"]]
+  // Logger.log(string_2d(resize_2d(a,[undefined,10],"X")))
+  // Logger.log(string_2d(attatch_2d([b,a],"X")))
 }

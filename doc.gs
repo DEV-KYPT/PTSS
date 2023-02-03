@@ -282,3 +282,130 @@ function gen_pf(pf = 4,out_doc = true,out_pdf = true){
   }
   return [doc,pdf]
 }
+
+function gen_draw(doc_in = undefined,out_doc = true, out_pdf = true,include_confirm = false){
+  var doc = null;
+  if(name == undefined){name = `[${get_full_name()}] draw_${get_now()}`;}
+
+  if(doc_in == undefined){doc =  doc_init(name);}
+  else{
+    doc = doc_in;
+    doc.appendPageBreak();
+  }
+  var body = doc.getBody();
+  var doc_id=doc.getId();
+
+}
+
+function gen_draw(confirm = false,doc = undefined,docs = true,pdf = true){
+  
+  var title = body.getParagraphs()[0];
+  title.appendText("Tournament Draw");
+  title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+  var note = body.appendParagraph('The order of teams listed (top to bottom) correspond to teams starting as Reporter, Opponent, Reviewer, Observer, Respectively.');
+  note.setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setItalic(true);
+  note.editAsText().setFontSize(8);
+  body.appendParagraph('').setItalic(false);  
+
+  // add draw here
+
+  var v = SpreadsheetApp.getActiveSpreadsheet().getRange(`Draw!A3:M24`).getValues();
+  var rooms = 6;
+  while(v[3][rooms*2] == ''){rooms--;}
+
+  for(var i = 0;i<v.length;i++){
+    v[i].splice(rooms*2+1,2*(6-rooms));
+  }
+
+  for(var i = 1;i<v[0].length;i=i+2){
+    v[0][i+1] = v[0][i];
+    v[1][i+1] = v[1][i];
+  }
+
+  for(var i = 0;i<v.length;i++){
+    for(var j = 0;j<v[0].length;j++){
+      if(j%2 == 1){
+        v[i][j] = ' ';
+      }
+      else if(typeof v[i][j] == typeof 1.0){
+        v[i][j] = num_to_str(v[i][j]);
+      }
+    }
+  }
+
+  v[0][0] = 'PF';
+  v[1][0] = '#';
+
+  var table = body.appendTable(v);
+
+  var mul = 560/(1+ 6 * rooms);
+
+  var columnWidths = [1*mul]; //av width: 595.276
+  
+  for(var i = 0;i<rooms;i++){
+    columnWidths.push(1*mul);
+    columnWidths.push(5*mul);
+  }
+
+  var style = table_style(table,columnWidths);
+
+  //add drawlist here
+
+  var list_v_raw = SpreadsheetApp.getActive().getRange('Draw!U4:V27').getValues();
+
+  for(var i = 0;i<list_v_raw.length;i++){
+    for(var j = 0;j<list_v_raw[0].length;j++){
+      if(typeof list_v_raw[i][j] == typeof 1.0){
+        list_v_raw[i][j] = num_to_str(list_v_raw[i][j]);
+      }
+    }
+  }
+
+  body.appendParagraph("Draw Placement").setHeading(DocumentApp.ParagraphHeading.NORMAL);
+
+  var list_v = new Array(7).fill('').map(() => new Array(10).fill(''));
+  // const matrix = new Array(5).fill(0).map(() => new Array(4).fill(0)); // 5 rows 4 coulumns zero matrix
+
+  [list_v[0][0],list_v[0][1 ]] = ['Draw','Team Name'];
+  [list_v[0][3],list_v[0][4 ]] = ['Draw','Team Name'];
+  [list_v[0][6],list_v[0][7 ]] = ['Draw','Team Name'];
+  [list_v[0][9],list_v[0][10]] = ['Draw','Team Name'];
+
+  // Logger.log(list_v_raw);
+  // Logger.log(list_v);
+
+  for(var i = 0;i<6;i++){
+    [list_v[i+1][1 ],list_v[i+1][0 ]] = list_v_raw[i];
+    [list_v[i+1][4 ],list_v[i+1][3 ]] = list_v_raw[i+6];
+    [list_v[i+1][7 ],list_v[i+1][6 ]] = list_v_raw[i+12];
+    [list_v[i+1][10],list_v[i+1][9 ]] = list_v_raw[i+18];
+  }
+
+  var table_drawlist = body.appendTable(list_v);
+
+  var columnWidths_drawlist = [30,105,1,30,105,1,30,105,1,30,105]; //av width: 595.276
+
+  var style_drawlist = table_style(table_drawlist,columnWidths_drawlist);
+
+  if(confirm){
+    var confirmQuote = body.appendParagraph("The Above Results have Been Checked and Confirmed.").setHeading(DocumentApp.ParagraphHeading.NORMAL).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    confirmQuote.editAsText().setBold(true).setFontSize(15);
+    
+    signatureOpening = body.appendParagraph(
+      "\n\nTimekeeper 1     Name   _________________ \tSignature __________________________________________________\n"+
+      "\n\nTimekeeper 2     Name   _________________ \tSignature __________________________________________________\n"+
+      "\n\nAdministrator     Name   _________________ \tSignature __________________________________________________"
+    )
+    signatureOpening.setHeading(DocumentApp.ParagraphHeading.NORMAL)
+  }  
+
+  if(pdf){
+    var pdf = savePDF(doc);
+    if (! docs){ return pdf;}
+    else {return [DocumentApp.openById(docId),pdf];}
+  }
+  else{
+    return doc;
+  }
+}
