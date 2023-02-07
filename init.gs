@@ -39,7 +39,8 @@ function init_external (category = "TEST",callname = get_now()){ //callname is a
     ['d','template-id' ,new_template.getId()],
     ['d','template-url',new_template.getUrl()],
     ['d','result-id'   ,new_result.getId()],
-    ['d','result-url'  ,new_result.getUrl()]
+    ['d','result-url'  ,new_result.getUrl()],
+    ['s','developers'  ,"iamchoking247;korea.kypt"],
     // ['d','',],    
   ]
 
@@ -53,6 +54,10 @@ function init_external (category = "TEST",callname = get_now()){ //callname is a
   new_ss.getRange("META_CALLNAME").setValue(callname)
 
   Logger.log("EXTERNAL INITIALIZATION SUCCESSFUL. NEW TOURNAMENT CREATED");
+}
+
+function is_new(){ //check if internal init is done in current document (true if there are no properties set)
+  get_prop_value('status','d') == null;
 }
 
 function init_internal(){

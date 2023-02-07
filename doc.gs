@@ -91,7 +91,7 @@ function generate_pdf(doc){
   return pdf;
 }
 
-function table_set_style(table,columnWidths,fontSize = 9,style = undefined,centered = false){
+function table_set_style(table,columnWidths,fontSize = 9,style = undefined,centered = false,padding = [3,1,2,2]){
   if(style == undefined){ //default style
     style = {};
     style[DocumentApp.Attribute.HORIZONTAL_ALIGNMENT] = DocumentApp.HorizontalAlignment.CENTER;
@@ -99,12 +99,13 @@ function table_set_style(table,columnWidths,fontSize = 9,style = undefined,cente
     style[DocumentApp.Attribute.FONT_SIZE]            = fontSize;
     style[DocumentApp.Attribute.ITALIC]               = false;
     style[DocumentApp.Attribute.BOLD]                 = false;
-    style[DocumentApp.Attribute.PADDING_LEFT]         = 3;
-    style[DocumentApp.Attribute.PADDING_RIGHT]        = 1;
-    style[DocumentApp.Attribute.PADDING_TOP]          = 2;
-    style[DocumentApp.Attribute.PADDING_BOTTOM]       = 2;
+    style[DocumentApp.Attribute.PADDING_LEFT]         = padding[0];
+    style[DocumentApp.Attribute.PADDING_RIGHT]        = padding[1];
+    style[DocumentApp.Attribute.PADDING_TOP]          = padding[2];
+    style[DocumentApp.Attribute.PADDING_BOTTOM]       = padding[3];
   }
-  
+  if(centered){style[DocumentApp.Attribute.HORIZONTAL_ALIGNMENT]=DocumentApp.HorizontalAlignment.CENTER;} //doesn't work...
+
   for(var i = 0; i<table.getNumRows();i++){
     for(var j = 0; j<columnWidths.length;j++){
       // Logger.log("%d,%d (total j: %d)",i,j,v[0].length);
@@ -152,6 +153,23 @@ function add_summary(rm,body,typ = "r"){ //add a summary of [Rm] instance as a n
   return t_result;
 }
 
+function add_confirm(body,entities = ["Administrator"],orientation = "p",spacing = 1){
+
+  var p_confirm = body.appendParagraph("The Above Results have Been Checked and Confirmed.");
+  p_confirm.setHeading(DocumentApp.ParagraphHeading.NORMAL).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  p_confirm.editAsText().setBold(true).setFontSize(12);
+
+  var s_signature  = '';
+  for(var e of entities){
+    s_signature += `${"\n".repeat(spacing)}${e}${" ".repeat(25-e.length)}`
+    s_signature += `Name   _________________ \tSignature ____________________________`;
+  }
+  var p_signature = body.appendParagraph(s_signature);
+  p_signature.setHeading(DocumentApp.ParagraphHeading.NORMAL).setFontFamily("Ubuntu Mono");
+  // p_signature.setFontWeight('bold');
+  return body;
+}
+
 function gen_rm(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true,typ = "r"){
   // typ(e): r: result, t-c: capture template, t-w: write template
   var doc = null;
@@ -190,15 +208,7 @@ function gen_rm(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true,t
 
   var tb_summary = add_summary(r,body,typ);
 
-  var p_confirm = body.appendParagraph("\nThe Preceding Results have Been Checked and Confirmed.").setHeading(DocumentApp.ParagraphHeading.NORMAL).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-  p_confirm.editAsText().setBold(true).setFontSize(15);
-
-  var s_signature = '';
-  s_signature += "\n\nEvaluating Timekeeper\tName   _________________ \tSignature ______________________________________________\n";
-  s_signature += "\n\nAdministrative Juror\tName   _________________ \tSignature ______________________________________________\n";
-  p_signature = body.appendParagraph(s_signature).setHeading(DocumentApp.ParagraphHeading.NORMAL);
-  // footer = 
-  // add signature as a footer in case of template. "Confirmation of Chair\tName   _________________ \tSignature _________________________________________"
+  add_confirm(body,['Evaluating Timekeeper','Administrative Juror'],'p',2);
 
   var pdf = null;
   if(out_pdf){
@@ -237,17 +247,7 @@ function gen_board(doc_in = undefined,out_doc = true,out_pdf = true,name = undef
   var tb = doc.appendTable(b.content_rank.map(row => row.map(e => String(e))));
   var style = table_set_style(tb,[140,40,40,40,40,40,40,70,70,40],12);
 
-  if(include_confirm){
-    var p_confirm = body.appendParagraph("The Above Results have Been Checked and Confirmed.");
-    p_confirm.setHeading(DocumentApp.ParagraphHeading.NORMAL).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-    p_confirm.editAsText().setBold(true).setFontSize(12);
-
-    var s_signature  = '';
-    s_signature += "\nEvaluator          Name   _________________ \tSignature __________________________________________________\n";
-    s_signature += "\nAdministrator    Name   _________________ \tSignature __________________________________________________"
-    var p_signature = body.appendParagraph(s_signature);
-    p_signature.setHeading(DocumentApp.ParagraphHeading.NORMAL)
-  }
+  if(include_confirm){add_confirm(body,['Evaluator','Administrator'],'p',1);}
 
   var pdf = null;
   if(out_pdf){
@@ -283,9 +283,9 @@ function gen_pf(pf = 4,out_doc = true,out_pdf = true){
   return [doc,pdf]
 }
 
-function gen_draw(doc_in = undefined,out_doc = true, out_pdf = true,include_confirm = false){
+function gen_draw(doc_in = undefined,out_doc = true, out_pdf = true,include_confirm = true){
   var doc = null;
-  if(name == undefined){name = `[${get_full_name()}] draw_${get_now()}`;}
+  var name = `[${get_full_name()}] draw ${get_now()}`;
 
   if(doc_in == undefined){doc =  doc_init(name);}
   else{
@@ -295,117 +295,177 @@ function gen_draw(doc_in = undefined,out_doc = true, out_pdf = true,include_conf
   var body = doc.getBody();
   var doc_id=doc.getId();
 
-}
+  var t = new Tournament();
+  t.pharse(0);
 
-function gen_draw(confirm = false,doc = undefined,docs = true,pdf = true){
+  var p_title = body.getParagraphs()[0];
+  p_title.appendText("Tournament Draw");
+  p_title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+  var p_note = body.appendParagraph('The order of teams listed (top to bottom) correspond to teams starting as Reporter, Opponent, Reviewer, Observer, Respectively.');
+  p_note.setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setItalic(true);
+  p_note.editAsText().setFontSize(8);
+  body.appendParagraph('').setItalic(false);
+
+  var a_draw = t.draw.draw_full;
+
+  for(var i = 1;i < a_draw[0].length;i += 2){a_draw = clear_2d(a_draw,[0,i],[a_draw.length-1,i]);}
+  // Logger.log(string_2d(a_draw))
   
-  var title = body.getParagraphs()[0];
-  title.appendText("Tournament Draw");
-  title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  var t_draw = body.appendTable(a_draw);
+  var cwf_draw = 560/(2+5.5*t.len_rm); //av width: 595.276 //cwf: column width factor
+  var cw_draw = [2*cwf_draw];
+  for(var i = 0;i<t.len_rm;i++){cw_draw = cw_draw.concat([0.5*cwf_draw,5*cwf_draw]);}
 
-  var note = body.appendParagraph('The order of teams listed (top to bottom) correspond to teams starting as Reporter, Opponent, Reviewer, Observer, Respectively.');
-  note.setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setItalic(true);
-  note.editAsText().setFontSize(8);
-  body.appendParagraph('').setItalic(false);  
+  var st_draw = table_set_style(t_draw,cw_draw,9,undefined,true,[2,1,1,1]);
 
-  // add draw here
-
-  var v = SpreadsheetApp.getActiveSpreadsheet().getRange(`Draw!A3:M24`).getValues();
-  var rooms = 6;
-  while(v[3][rooms*2] == ''){rooms--;}
-
-  for(var i = 0;i<v.length;i++){
-    v[i].splice(rooms*2+1,2*(6-rooms));
+  // roster
+  var a_roster = t.draw.draw_roster.map(row => row.map(e => String(e)));
+  var col_len = 12; //number of teams to include in one col.
+  var a_roster_cut = [];
+  for(var i = 0;i<=t.draw.num_teams;i += col_len){
+    var j = i + col_len;
+    if(j > t.draw.num_teams){j = t.draw.num_teams};
+    // Logger.log([i,j,t.draw.num_teams])
+    a_roster_cut.push(a_roster.slice(i,j));
+    a_roster_cut.push([[" "]]);//empty column for spacing
   }
-
-  for(var i = 1;i<v[0].length;i=i+2){
-    v[0][i+1] = v[0][i];
-    v[1][i+1] = v[1][i];
-  }
-
-  for(var i = 0;i<v.length;i++){
-    for(var j = 0;j<v[0].length;j++){
-      if(j%2 == 1){
-        v[i][j] = ' ';
-      }
-      else if(typeof v[i][j] == typeof 1.0){
-        v[i][j] = num_to_str(v[i][j]);
-      }
-    }
-  }
-
-  v[0][0] = 'PF';
-  v[1][0] = '#';
-
-  var table = body.appendTable(v);
-
-  var mul = 560/(1+ 6 * rooms);
-
-  var columnWidths = [1*mul]; //av width: 595.276
   
-  for(var i = 0;i<rooms;i++){
-    columnWidths.push(1*mul);
-    columnWidths.push(5*mul);
-  }
-
-  var style = table_style(table,columnWidths);
-
-  //add drawlist here
-
-  var list_v_raw = SpreadsheetApp.getActive().getRange('Draw!U4:V27').getValues();
-
-  for(var i = 0;i<list_v_raw.length;i++){
-    for(var j = 0;j<list_v_raw[0].length;j++){
-      if(typeof list_v_raw[i][j] == typeof 1.0){
-        list_v_raw[i][j] = num_to_str(list_v_raw[i][j]);
-      }
-    }
-  }
+  var a_header = [["Draw","Team Name"]];
+  for(var col = 0;col<a_roster_cut.length;col+=2){a_roster_cut[col] = a_header.concat(a_roster_cut[col]);}
+  // Logger.log(multistring_2d(a_roster_cut))
+  var a_roster_processed = attatch_2d(a_roster_cut);
+  // Logger.log(string_2d(a_roster_processed,undefined,0,true))
 
   body.appendParagraph("Draw Placement").setHeading(DocumentApp.ParagraphHeading.NORMAL);
+  var t_roster_cut = body.appendTable(a_roster_processed);
+  var cwf_roster = 560/(6.5*(a_roster_cut.length/2));
+  var cw_roster = [];
+  for(var i = 0;i<a_roster_cut.length/2;i++){cw_roster = cw_roster.concat([1.5*cwf_roster,4.5*cwf_roster,0.5*cwf_roster]);}
+  // Logger.log(cw_roster)
 
-  var list_v = new Array(7).fill('').map(() => new Array(10).fill(''));
-  // const matrix = new Array(5).fill(0).map(() => new Array(4).fill(0)); // 5 rows 4 coulumns zero matrix
+  var st_roster = table_set_style(t_roster_cut,cw_roster,9,undefined,true,[2,1,1,1]);
 
-  [list_v[0][0],list_v[0][1 ]] = ['Draw','Team Name'];
-  [list_v[0][3],list_v[0][4 ]] = ['Draw','Team Name'];
-  [list_v[0][6],list_v[0][7 ]] = ['Draw','Team Name'];
-  [list_v[0][9],list_v[0][10]] = ['Draw','Team Name'];
+  if(include_confirm){add_confirm(body,['Administrator'],'p',2);}
 
-  // Logger.log(list_v_raw);
-  // Logger.log(list_v);
-
-  for(var i = 0;i<6;i++){
-    [list_v[i+1][1 ],list_v[i+1][0 ]] = list_v_raw[i];
-    [list_v[i+1][4 ],list_v[i+1][3 ]] = list_v_raw[i+6];
-    [list_v[i+1][7 ],list_v[i+1][6 ]] = list_v_raw[i+12];
-    [list_v[i+1][10],list_v[i+1][9 ]] = list_v_raw[i+18];
+  var pdf = null;
+  if(out_pdf){
+    pdf = generate_pdf(doc);
+    doc = DocumentApp.openById(doc_id);
   }
-
-  var table_drawlist = body.appendTable(list_v);
-
-  var columnWidths_drawlist = [30,105,1,30,105,1,30,105,1,30,105]; //av width: 595.276
-
-  var style_drawlist = table_style(table_drawlist,columnWidths_drawlist);
-
-  if(confirm){
-    var confirmQuote = body.appendParagraph("The Above Results have Been Checked and Confirmed.").setHeading(DocumentApp.ParagraphHeading.NORMAL).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-    confirmQuote.editAsText().setBold(true).setFontSize(15);
-    
-    signatureOpening = body.appendParagraph(
-      "\n\nTimekeeper 1     Name   _________________ \tSignature __________________________________________________\n"+
-      "\n\nTimekeeper 2     Name   _________________ \tSignature __________________________________________________\n"+
-      "\n\nAdministrator     Name   _________________ \tSignature __________________________________________________"
-    )
-    signatureOpening.setHeading(DocumentApp.ParagraphHeading.NORMAL)
-  }  
-
-  if(pdf){
-    var pdf = savePDF(doc);
-    if (! docs){ return pdf;}
-    else {return [DocumentApp.openById(docId),pdf];}
-  }
-  else{
-    return doc;
-  }
+  return [doc,pdf]
 }
+
+function gen_db(doc_in = undefined,out_doc = true,out_pdf = true,include_confirm = false){
+  var doc = null;
+  var name = `[${get_full_name()}] database ${get_now()}`;
+
+  if(doc_in == undefined){doc =  doc_init(name,'l');}
+  else{
+    doc = doc_in;
+    doc.appendPageBreak();
+  }
+  var body = doc.getBody();
+  var doc_id=doc.getId();
+
+  var c = new Core();
+  c.pharse();
+
+  var p_title = doc.getParagraphs()[0];
+  p_title.appendText(`Tournament Progression Information (${get_now()})`);
+  p_title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+  var a_prbs  = slice_2d(attatch_2d([c.content_teams,c.content_prbs ]).map(row => row.map(e => String(e))),[2,0]);
+  var a_prbs_header = [['','Reported (P)','Opposed (O)','Reviewed (R)','Rejected']]
+  var a_names = attatch_2d([c.content_teams,c.content_names]).map(row => row.map(e => String(e)));
+  //av width: 595.276 //cwf: column width factor
+  
+  var cw_base_prbs = [1,5]; // #&name
+  var n = 1
+  cw_base_prbs = cw_base_prbs.concat([n,n,n,n,n,n]); //reported prbs
+  cw_base_prbs = cw_base_prbs.concat([n,n,n,n,n,n]); //opposed prbs
+  cw_base_prbs = cw_base_prbs.concat([n,n,n,n,n,n]); //reviewed prbs
+  cw_base_prbs = cw_base_prbs.concat([6,6,6,6,6,6]); //rejected prbs
+
+  var cwf_prbs = 800/(cw_base_prbs.reduce((a, b) => a + b, 0));
+  // var cw_prbs = cw_base_prbs.map(cw => Math.round(cw*( cwf_prbs )))
+  var cw_prbs = cw_base_prbs.map(cw => cw*( cwf_prbs ))
+
+  var cw_prbs_header = [
+    cw_prbs.slice(0,2).reduce((a, b) => a + b, 0),
+    cw_prbs.slice(2,8).reduce((a, b) => a + b, 0),
+    cw_prbs.slice(8,14).reduce((a, b) => a + b, 0)+1,
+    cw_prbs.slice(14,20).reduce((a, b) => a + b, 0)+2,
+    cw_prbs.slice(20,26).reduce((a, b) => a + b, 0)+2
+  ]
+
+  var st_btw_tables = {}
+  st_btw_tables[DocumentApp.Attribute.LINE_SPACING] = 0.1;
+  body.appendParagraph('Problems Sequence');
+  body.appendParagraph(' ').editAsText().setFontSize(1).setAttributes(st_btw_tables).merge();
+
+  var t_prbs_header = body.appendTable(a_prbs_header);
+  var t_prbs        = body.appendTable(a_prbs);
+
+  var st_prbs_header = table_set_style(t_prbs_header, cw_prbs_header,8,undefined,false,[2,1,1,1])
+  var st_prbs        = table_set_style(t_prbs       , cw_prbs       ,8,undefined,false,[2,1,1,1])
+
+  // // Log the attributes.
+  // var atts = t_prbs_header.getRow(0).getAttributes();
+  // for (var att in atts) {
+  //   Logger.log(att + ":" + atts[att]);
+  // }
+  if(include_confirm){add_confirm(body,["Evaluator","Administrator"],"l",2);}
+
+
+  // names
+  body.appendPageBreak();
+
+  var a_names = slice_2d(attatch_2d([c.content_teams,c.content_names]).map(row => row.map(e => String(e))),[2,0]);
+  var a_names_header = [['','Reporter','Opponent','Reviewer']];
+
+  var cw_base_names = [1,5];
+  var n = 3
+  cw_base_names = cw_base_names.concat([n,n,n,n,n,n]); //Reporter names
+  cw_base_names = cw_base_names.concat([n,n,n,n,n,n]); //Opponent names
+  cw_base_names = cw_base_names.concat([n,n,n,n,n,n]); //Reviewer names
+  var cwf_names = 800/(cw_base_names.reduce((a, b) => a + b, 0));
+  var cw_names = cw_base_names.map(cw => cw*( cwf_names ));
+
+  var cw_names_header = [
+    cw_names.slice(0,2).reduce((a, b) => a + b, 0),
+    cw_names.slice(2,8).reduce((a, b) => a + b, 0)-2,
+    cw_names.slice(8,14).reduce((a, b) => a + b, 0)-1,
+    cw_names.slice(14,20).reduce((a, b) => a + b, 0)-1
+  ]
+  
+  body.appendParagraph('Presenters Sequence').setHeading(DocumentApp.ParagraphHeading.NORMAL);
+  body.appendParagraph(' ').editAsText().setFontSize(1).setAttributes(st_btw_tables).merge();
+
+  var t_names_header = body.appendTable(a_names_header);
+  var t_names        = body.appendTable(a_names);
+
+  var st_names_header = table_set_style(t_names_header, cw_names_header,8,undefined,false,[2,1,1,1])
+  var st_names        = table_set_style(t_names       , cw_names       ,8,undefined,false,[2,1,1,1])
+
+  if(include_confirm){add_confirm(body,["Evaluator","Administrator"],"l",2);}
+
+  var pdf = null;
+  if(out_pdf){
+    pdf = generate_pdf(doc);
+    doc = DocumentApp.openById(doc_id);
+  }
+  return [doc,pdf]
+
+}
+
+// TODO
+// function gen_select(){}
+
+// function gen_final(){}
+
+// typ options for gen_rm
+// function populate_capture_templates(){}
+// function populate_write_templates(){}
+
+

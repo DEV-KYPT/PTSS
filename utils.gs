@@ -1,3 +1,23 @@
+// utility for use in spreadsheet
+
+function make_relative(range = SpreadsheetApp.getActiveRange()){
+  var f_start = range.getFormulas();
+  var count = 0
+  for(var idx_row = 1;idx_row <= range.getNumRows();idx_row++){
+    for(var idx_col = 1;idx_col <= range.getNumColumns();idx_col++){
+      if(f_start[idx_row-1][idx_col-1] == ""){continue;}
+      if(f_start[idx_row-1][idx_col-1].includes("$")){
+        range.getCell(idx_row,idx_col).setFormula(f_start[idx_row-1][idx_col-1].replace("$",""));
+        count += 1;
+      }
+    }
+  }
+  Logger.log(`${count} Formulas edited.`)
+  return count
+}
+
+// 2d array handling
+
 function slice_2d(array=[[]],idx_s = [0,0],idx_e = [array.length,array[0].length]){
   return array.slice(idx_s[0],idx_e[0]+1).map(row => row.slice(idx_s[1],idx_e[1]+1))
 }
@@ -11,14 +31,15 @@ function clear_2d(array=[[]],idx_s = [0,0],idx_e = [array.length,array[0].length
   return array
 }
 
-function attatch_2d(arrays=[[[]],[['a','b','c'],['d','e','f']],[[]]],fill_char = ""){
+function attatch_2d(arrays=[[['1']],[['a','b','c'],['d','e','f']],[[]]],fill_char = ""){
   var max_rows = 0;
   for(var arr of arrays){
     if(arr.length > max_rows){max_rows = arr.length;}
   }
+  // Logger.log(max_rows)
   var resized_arrays = [];
   for(var arr of arrays){resized_arrays.push(resize_2d(arr,[max_rows,undefined],fill_char));}
-  Logger.log(resized_arrays)
+  // Logger.log(resized_arrays)
   var output_array = [];
   for(var idx_row = 0;idx_row<max_rows;idx_row++){
     output_array.push([]);
@@ -43,6 +64,31 @@ function resize_2d(array = [[]],size = [undefined,undefined],fill_char = ""){
   }
   return array
 }
+
+function copy_2d(array){
+  var new_array = [];
+  for(var i_r = 0;i_r < array.length;i_r++){
+    new_array[i_r] = array[i_r].slice();
+    // Logger.log(array[i_r].slice())
+  }
+  // Logger.log(`origin: ${string_2d(array)}`)
+  // Logger.log(`copied: ${string_2d(new_array)}`)
+  return new_array
+}
+
+function create_2d(size = [2,2],value = ""){
+  var arr = [];
+  for(var i = 0;i<size[0];i++){
+    var row = [];
+    for(var j = 0;j<size[1];j++){
+      row.push(value);
+    }
+    arr.push(row);
+  }
+  return arr
+}
+
+// 2d array visualization
 
 function string_2d(array=[[null]],name='',pre_tabs = 0,output_dims = false,max_size = 0){
   var maxlen = 0;
@@ -95,7 +141,7 @@ function multistring_2d(arrays = [[[]],[[]]],names = undefined,pre_tabs = 0,outp
     // Logger.log(l)
     if(lines_raw[l].length < max_lines){
       // Logger.log(`resizing entry ${l}`)
-      lines_raw[l].push(Array(max_lines-lines_raw[l].length).fill(' '.repeat(lines_raw[l][0].length)));
+      lines_raw[l]= lines_raw[l].concat(Array(max_lines-lines_raw[l].length).fill(' '.repeat(lines_raw[l][0].length)));
     }
   }
 
@@ -114,22 +160,75 @@ function multistring_2d(arrays = [[[]],[[]]],names = undefined,pre_tabs = 0,outp
   return output
 }
 
-function make_relative(range = SpreadsheetApp.getActiveRange()){
-  var f_start = range.getFormulas();
-  var count = 0
-  for(var idx_row = 1;idx_row <= range.getNumRows();idx_row++){
-    for(var idx_col = 1;idx_col <= range.getNumColumns();idx_col++){
-      if(f_start[idx_row-1][idx_col-1] == ""){continue;}
-      if(f_start[idx_row-1][idx_col-1].includes("$")){
-        range.getCell(idx_row,idx_col).setFormula(f_start[idx_row-1][idx_col-1].replace("$",""));
-        count += 1;
-      }
-    }
-  }
-  Logger.log(`${count} Formulas edited.`)
-  return count
+// chatbot utilities
+
+function simplify_name(s){
+  return s.slice(0,2)+s.slice(-1);
 }
 
+function filter_empty(arr){
+  return arr.filter(element => {return element !== '';});
+}
+
+function remove_item(arr, value) {
+  var index = arr.indexOf(value);
+  if (index > -1) {
+    arr.splice(index, 1);
+  }
+  return arr;
+}
+
+// html utils (for chatbot)
+function str_to_html(s){
+  return s.replace(/(?:\r\n|\r|\n)/g, '<br>');
+}
+
+function get_cb_style(typ){
+  var cb_styles = { // chatbot colors
+  "default"  : ["black"        ,'normal' ],
+  "cmd"      : ["darkmagenta"  ,'bold'   ], //command
+  "error"    : ["red"          ,'normal' ],
+  "warn"     : ["orange"       ,'normal' ],
+  "challenge": ["blue"         ,'bold'   ], //challenge
+  "reject"   : ["darkred"      ,'bold'], //rejected
+  "accept"   : ["forestgreen"  ,'bold'   ], //accepted
+  "relaxed"  : ["deeppink"     ,'normal' ], //relaxed
+  "conflict" : ["maroon"       ,'normal' ], //conflicting rules
+  "undo"     : ["brown"        ,'normal' ],  //undo(tooltip)
+  "status"   : ["purple"       ,'bold'   ],
+  "write"    : ["darkslateblue",'normal' ]
+  }
+  return cb_styles[typ];
+}
+
+function html(s,style = "default",tag = 'span'){
+  if([null,undefined,''].includes(style)){
+    return str_to_html(`<${tag}>${s}</${tag}>`);
+  }
+  var st = get_cb_style(style);
+  return str_to_html(`<${tag} style="color:${st[0]};font-weight:${st[1]};">${s}</${tag}>`);
+}
+
+function html_table(array,styles = undefined,header = true,){
+  if(styles == undefined){styles = create_2d([array.length,array[0].length],'default');}
+  // Logger.log(string_2d(styles))
+  var output_html = "<table>";
+  var data = copy_2d(array);
+  if(header){
+    output_html+="<tr>"
+    for(var j = 0;j<data[0].length;j++){output_html+=html(data[0][j],styles[0][j],'th')}
+    output_html+="</tr>"
+    data.splice(0,1);
+    styles.splice(0,1);
+  }
+  for(var i = 0;i<data.length;i++){
+    output_html+=`<tr>`
+    for(var j = 0;j<data[0].length;j++){output_html+=html(data[i][j],styles[i][j],'td')}
+    output_html+=`</tr>`
+  }
+  output_html+="</table>"
+  return str_to_html(output_html);
+}
 
 
 

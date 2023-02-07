@@ -8,7 +8,9 @@ class Tournament { //lv0 (top)
     
     this.category = null;
     this.callname = null;
-    this.pf     = [null]
+
+    this.draw   = null;
+    this.pf     = [null];
   }
 
   is_pharsed(){return(this.pf.length != 1);}
@@ -22,6 +24,9 @@ class Tournament { //lv0 (top)
 
     this.len_pf = this.ss.getRange("SEED_PFS").getValue();
     this.len_rm = this.ss.getRange("SEED_RMS").getValue();
+
+    this.draw = new Draw();
+    this.draw.pharse();
 
     for(var i = 1;i<=this.len_pf;i++){this.pf.push(new Pf(i,this.len_rm))}
 
@@ -47,10 +52,48 @@ class Tournament { //lv0 (top)
 
   toString(){
     var output = `Tournament Instance  `;
-    if(this.is_pharsed()){output+= `[${this.category}-${this.callname}]\t[PFS:${this.len_pf}] [RMS:${this.len_rm}]`}
-    else{output += '\t[UNPHARSED]'}
+    if(!this.is_pharsed()){return output+ '\t[UNPHARSED]';}
+    output+= `[${this.category}-${this.callname}]\t[PFS:${this.len_pf}] [RMS:${this.len_rm}]`
+    output += `\n${this.draw.interpret(0)}`;
     return output
   }
+}
+
+// Class within Tournament defined for pharsing draw ("DRAW") information
+class Draw{
+  constructor(){
+    this.ss = get_ss_spreadsheet();
+
+    this.len_pf = null;
+    this.len_rm = null;
+    this.num_teams = null;
+
+    this.draw_full = null;
+    this.draw_roster = null;
+  }
+
+  is_pharsed(){return this.len_pf != null;}
+
+  pharse(lv = 0){
+    if(this.is_pharsed()){return;}
+    this.len_pf = this.ss.getRange("SEED_PFS").getValue();
+    this.len_rm = this.ss.getRange("SEED_RMS").getValue();
+    this.num_teams = this.ss.getRange("DRAW_NUMTEAMS").getValue();
+
+    this.draw_full   = slice_2d(this.ss.getRange("DRAW_FULL").getValues(),[0,0],[1+5*this.len_pf,2*this.len_rm]);
+    this.draw_roster = slice_2d(this.ss.getRange("DRAW_ROSTER").getValues(),[0,0],[this.ss.getRange("DRAW_NUMTEAMS").getValue()-1,1]);
+  }
+
+  interpret(lv = 0){return this.toString();}
+
+  toString(){
+    var output = `\tDraw`
+    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+    output += `\t[${this.num_teams} TEAMS]\n`
+    output += multistring_2d([this.draw_full,this.draw_roster],["FULL DRAW","RST"],1,true)
+    return output    
+  }
+
 }
 
 class Pf { //lv1
@@ -180,32 +223,21 @@ class St {
     this.rm_num = rm_num;
     this.st_num = st_num;
 
-    this.challenge = {
-      "constraints":{
-        "B":[],
-        "P":[],
-        "a":[],
-        "b":[],
-        "c":[],
-        "d":[]
-      },
-      "rej":[],
-      "acc":null,
-      "nrej":[],
-      "penalty":null,//true if weight penalty was inflicted.
-      "weight":null  //calculated reporter weight
-    }
-
     this.raw       = null;
+
+    this.challenge = null;
     this.result    = null;
   }
 
   is_pharsed(){return(this.raw != null)}
 
   pharse(lv = 0){
-    this.raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`).getValues()
+    this.raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`).getValues();
     // Logger.log(string_2d(this.raw,"RAW",0,true,6))
-    this.pharse_challenge();
+
+    this.challenge = new Challenge(this.pf_num,this.rm_num,this.st_num)
+    this.challenge.pharse(0,this.raw);
+
     this.result = slice_2d(this.raw,[1,2],[4,21])
     for(var idx = 0;idx<this.result.length;idx++){this.result[idx].splice(16,3);}
     this.result[0][0] = `Team`;
@@ -214,22 +246,6 @@ class St {
     this.result[2][0] = `Opp.[${this.result[2][0]}]`;
     this.result[3][0] = `Rev.[${this.result[3][0]}]`;
 
-  }
-
-  pharse_challenge(){ // used the "-1" to help with compatibility with 0-index and 1-index
-    this.challenge["constraints"]["B"] = this.raw[7-1][4-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.challenge["constraints"]["P"] = this.raw[7-1][7-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.challenge["constraints"]["a"] = this.raw[7-1][10-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.challenge["constraints"]["b"] = this.raw[7-1][13-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.challenge["constraints"]["c"] = this.raw[7-1][16-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.challenge["constraints"]["d"] = this.raw[7-1][19-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-
-    this.challenge["rej"] = this.raw[1-1].slice(6-1,16-1+1).map(str => Number(str)).filter(num => num != 0);
-    this.challenge["acc"] = this.raw[1-1][18-1]
-
-    this.challenge["nrej"]= this.challenge["constraints"]["a"].length + this.challenge["rej"].length
-    this.challenge["weight"] = this.raw[2][19];
-    this.challenge["penalty"] = this.challenge["nrej"] > this.ss.getRange("RULE_SCR_AR").getValue();
   }
 
   interpret(lv=0){ // bottom level, no interpretation required
@@ -245,15 +261,182 @@ class St {
     // Logger.log([this.roster,this.summary["scr"],this.summary["fw"]])
 
     // output += `\n${string_2d(this.raw,"RAW",3,true,5)}`
+
+    output += `\n${this.challenge.interpret(0)}`
+
     output += `\n${string_2d(this.result,"RESULT",3,true,6)}`
 
-    output += `\n\t\t\tChallenge:`
-    output += `\n\t\t\t  Constraints: [B:${this.challenge["constraints"]["B"]}], [P:${this.challenge["constraints"]["P"]}], [a:${this.challenge["constraints"]["a"]}], [b:${this.challenge["constraints"]["b"]}], [c:${this.challenge["constraints"]["c"]}], [d:${this.challenge["constraints"]["d"]}]`
-    output += `\n\t\t\t  Rejected:[${this.challenge["rej"]}] (total of ${this.challenge["nrej"]}), penalty:${this.challenge["penalty"]} (weight: ${this.challenge["weight"]})`
-    output += `\n\t\t\t  Accepted: ${this.challenge["acc"]}`
     return output
   }
   
+}
+
+// Class within Tournament defined for pharsing challenge information (used extensively in chatbot)
+class Challenge{
+  constructor(pf_num,rm_num,st_num){
+    this.ss = get_ss_spreadsheet();
+    this.pf_num = pf_num;
+    this.rm_num = rm_num;
+    this.st_num = st_num;
+    
+    this.rep_team = null;
+    this.opp_team = null;
+    this.rev_team = null;
+
+    this.complete = null; // true if this challenge is complete
+    this.select   = null; // true if this challenge is pre-selected
+
+    this.constraints = { //problems blocked by each rule
+      "B":[],
+      "P":[],
+      "a":[],
+      "b":[],
+      "c":[],
+      "d":[]
+    }
+    this.available = { //problems not blocked by given rule and above
+      "B":[],
+      "P":[],
+      "a":[],
+      "b":[],
+      "c":[],
+      "d":[]        
+    },
+    
+    this.rej    = [];
+    this.acc    = null;
+
+
+    this.nrej   = null;
+    this.penalty= null;  //true if weight penalty was inflicted.
+    this.weight = null;  //calculated reporter weight
+
+    // range variables (pharsed later at write.)
+    this.rej_range = null;
+    this.acc_range = null;
+  }
+
+  is_pharsed(){return this.penalty != null;}
+
+  pharse(lv = 0,raw = undefined){
+    if(raw == undefined){raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`).getValues();}
+
+    this.rep_team = raw[2][2].toString();
+    this.opp_team = raw[3][2].toString();
+    this.rev_team = raw[4][2].toString();
+
+    this.constraints["B"] = raw[7-1][4-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.constraints["P"] = raw[7-1][7-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.constraints["a"] = raw[7-1][10-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.constraints["b"] = raw[7-1][13-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.constraints["c"] = raw[7-1][16-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.constraints["d"] = raw[7-1][19-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+
+    this.available["B"]   = raw[8-1][4-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.available["P"]   = raw[8-1][7-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.available["a"]   = raw[8-1][10-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.available["b"]   = raw[8-1][13-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.available["c"]   = raw[8-1][16-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.available["d"]   = raw[8-1][19-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+
+    this.rej = raw[1-1].slice(6-1,16-1+1).map(str => Number(str)).filter(num => num != 0);
+    this.acc = raw[1-1][18-1];
+
+    this.select = this.ss.getRange("RULE_PRB_SEL").getValues()[0][this.pf_num-1];
+    if(this.select){
+      this.rej = [];
+      this.acc = raw[6][0];
+    }
+
+    this.complete = Number(this.acc) != 0;
+
+    this.nrej    = this.constraints["a"].length + this.rej.length
+    this.weight  = raw[2][19];
+    this.penalty = this.nrej > this.ss.getRange("RULE_SCR_AR").getValue();
+
+  }
+
+  interpret(lv = 0){return this.toString();}
+
+  toString(){
+    var output = `\t\t\tChallenge [${this.pf_num}-${this.rm_num}-${this.st_num}]`
+    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+
+    if(this.complete){output += ' <COMPLETE>';}
+    else             {output += ' <INCOMPLETE>';}
+
+    if(this.select){output += ' (PRE-SELECTED)';}
+
+    output += `\n\t\t\t REP: ${this.rep_team} | OPP: ${this.opp_team} | REV: ${this.rev_team}`
+
+    output += '\n';
+    var a_constraints = [
+      [`[B:${this.constraints["B"]}]`],
+      [`[P:${this.constraints["P"]}]`],
+      [`[a:${this.constraints["a"]}]`],
+      [`[b:${this.constraints["b"]}]`],
+      [`[c:${this.constraints["c"]}]`],
+      [`[d:${this.constraints["d"]}]`]
+    ];
+
+    var a_available = [
+      [`[B:${this.available["B"]}]`],
+      [`[P:${this.available["P"]}]`],
+      [`[a:${this.available["a"]}]`],
+      [`[b:${this.available["b"]}]`],
+      [`[c:${this.available["c"]}]`],
+      [`[d:${this.available["d"]}]`]
+    ];
+
+    output += multistring_2d([a_constraints,a_available],["CONSTRAINTS","AVAILABLE"],3,false)
+
+    output += `\t\t\t  Rejected:[${this.rej}] (total of ${this.nrej}), penalty:${this.penalty} (weight: ${this.weight})`
+    output += `\n\t\t\t  Accepted: ${this.acc}`
+
+    return output
+  }
+
+  //additonal pure function / output methods for chatbot use
+
+  ignore_written_results(){// ignores the user input values (new rejects, accept)
+    var done = false;
+    if(this.select){return false;} //do not ignore if this stage is pre-selected.
+    if(this.rej.length != 0 || this.complete){done = true;}
+    for(var p of this.rej){
+      // this.constraints['a'] = remove_item(this.constraints['a'],p);
+      for(var r of ['a','b','c','d']){
+        if(this.constraints[r].includes(p)){break;}
+        this.available[r].push(p);
+      }
+    }
+    this.nrej -= this.rej.length;
+    this.rej = [];
+    this.acc = '';
+    this.complete = false;
+    return done;
+  }
+
+  add_rej(p){
+    this.rej.push(p);
+    this.nrej += 1;
+    this.constraints['a'].push(p);
+    remove_item(this.available['a'],p);
+    remove_item(this.available['b'],p);
+    remove_item(this.available['c'],p);
+    remove_item(this.available['d'],p);
+  }
+
+  write(){ //write the current .rej & .acc values to the appropriate location.
+    var raw_range  = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`);
+    var sheet_data = raw_range.getSheet()
+    this.rej_range = sheet_data.getRange(raw_range.getRow(),raw_range.getColumn()+5,1,11);
+    this.acc_range = sheet_data.getRange(raw_range.getRow(),raw_range.getColumn()+17);
+    
+    this.rej_range.setValues(resize_2d([this.rej],[1,11],""));
+    this.acc_range.setValue(this.acc);
+    return true;
+  }
+
 }
 
 // Separate class defined for pharsing leaderboard ("BOARD") information
@@ -286,12 +469,66 @@ class Board{
   }
 }
 
-// Separate class defined for pharsing draw ("DRAW") information
-class Draw{
-  //TODO
+class Core{
+  constructor(){
+    this.ss = get_ss_spreadsheet();
+    this.content_prbs = null;
+    this.content_names = null;
+    this.content_teams = null;
+  }
+
+  is_pharsed(){return this.content_prbs != null;}
+
+  pharse(){
+    if(this.is_pharsed()){return;}
+    this.content_prbs  = this.ss.getRange("CORE_OUT_PRBS" ).getValues();
+    this.content_names = this.ss.getRange("CORE_OUT_NAMES").getValues();
+    this.content_teams = this.ss.getRange("CORE_OUT_TEAMS").getValues();
+  }
+
+  interpret(){return this.toString();}
+  
+  toString(){
+    var output = `Core`
+    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+    output += `\n${multistring_2d([this.content_teams,this.content_prbs],undefined,0,false,6)}`
+    output += `\n\n${multistring_2d([this.content_teams,this.content_names],undefined,0,false,5)}`
+    return output  
+  }
 }
 
 // Separate class defined for pharsing selection verdict ("SELECT") information
 class Select{
   //TODO
 }
+
+// Separate class for pharsing rules of challenge (used in chatbot)
+class Rule{
+  constructor(){
+    this.ss = get_ss_spreadsheet();
+    this.mr = this.ss.getRange("RULE_PRB_MR").getValue(); //max.rejects
+    this.ma = this.ss.getRange("RULE_PRB_MA").getValue(); //minimum available (below which rule relaxes)
+    // this.ar = null;
+    this.all_prbs = filter_empty(this.ss.getRange("META_PRB_SET").getValues()[0]);
+    this.all_rules = ["B","P",'a','b','c','d'];
+    this.desc  = {
+      'B':"Banned in KYPT",
+      'P':"Presented in this PF",
+      'a':"Rejected by Reporter",
+      'b':"Presented by Reporter",
+      'c':"Opposed by Opponent",
+      'd':"Presented by Opponent",
+      'o':"Out of Range",
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+

@@ -106,6 +106,7 @@ function get_prop_value(keyword,scope = "sdu"){
   if(value_s){return value_s;}
   if(value_d){return value_d;}
   if(value_u){return value_u;}
+  return null;
 }
 
 

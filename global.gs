@@ -5,14 +5,17 @@
  */
 const VERSION = 'v1.0.0' //all version info's displayed reference this string
 
-try{
-  /**
-   * [global] The handle for the current ui (independent to spreadsheet or sheet, etc.)
-   * @type {Ui}
-   */
-  var ui = SpreadsheetApp.getUi();
-}catch (error) {
-  Logger.log('Exception in Fetching UI: \n' + error);
+function get_ui(){
+  try{
+    /**
+     * [global] The handle for the current ui (independent to spreadsheet or sheet, etc.)
+     * @type {Ui}
+     */
+    var ui = SpreadsheetApp.getUi();
+  }catch (error) {
+    Logger.log('Exception in Fetching UI: \n' + error);
+  }
+  return ui;
 }
 
 /**

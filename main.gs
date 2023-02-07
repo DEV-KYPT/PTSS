@@ -2,8 +2,13 @@ function main(){
   /////////////////////////////////////////////////////////////
   // var t = new Tournament();
   // Logger.log(t.toString());
-  // t.pharse(1)
-  // Logger.log(t.interpret(2))
+  // t.pharse(0)
+  // Logger.log(t.interpret(0))
+
+  // var d = new Draw();
+  // Logger.log(""+d);
+  // d.pharse()
+  // Logger.log(""+d)
 
   /////////////////////////////////////////////////////////////
   // var p = new Pf(3,6)
@@ -21,6 +26,10 @@ function main(){
   // s.pharse()
   // Logger.log(""+s)
 
+  var c = new Challenge(6,1,4);
+  c.pharse();
+  Logger.log(""+c)
+  Logger.log(c.select)
   /////////////////////////////////////////////////////////////
   // var b = new Board()
   // b.pharse()
@@ -44,8 +53,23 @@ function main(){
   // Logger.log(multistring_2d([array1,array2],['A','B'],3,true,2))
 
   /////////////////////////////////////////////////////////////
-  // a = [["1"],[2],[3]];
-  // b = [["a","b","c"]]
-  // Logger.log(string_2d(resize_2d(a,[undefined,10],"X")))
-  // Logger.log(string_2d(attatch_2d([b,a],"X")))
+  // var c = new Core();
+  // c.pharse();
+  // Logger.log(""+c);
+
+  /////////////////////////////////////////////////////////////
+  // var conv = new Chat(1,2,3);
+  // conv.add_cmd('c')
+  // Logger.log(''+conv);
+  
 }
+
+
+
+
+
+
+
+
+
+

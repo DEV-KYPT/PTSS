@@ -4,58 +4,63 @@
  * @return {null}
  */
 function onOpen(){
-  Logger.log("This file was opened by: " + Session.getActiveUser().getEmail() +" ");
-  // if(PropertiesService.getDocumentProperties().getProperty('status') == null){
-  //   ui.createMenu("Initialize KYPT Scoring System")
-  //   .addItem('Initialize Scoring System','initGate')
-  //   .addToUi();
-  //   ui.alert('This document was opened for the first time. Please Initialize with the dropdown menu above.')
-  //   return;
-  // }
-  // if(! initGate()){return;}
-  // ui.createMenu("KYPT Script")
-  // .addSubMenu(
-  //   ui.createMenu('Generate Documents')
-  //   .addItem('Draw','user_gen_draw')
-  //   .addItem('Leaderboard Status','user_gen_pf_status')
-  //   .addItem('Tournament Progression Status','user_gen_database')
-  //   .addItem('PF4 Questions Verdict','user_gen_pf4_problems')
-  //   .addItem('PF##, RM##', 'user_gen_pfrm')
-  //   .addItem('Total Summary of PF','user_gen_pf_summary')
-  //   .addItem('Finals','user_gen_final')
-  // )
-  // .addSubMenu(
-  //   ui.createMenu('Generate Templates')
-  //   .addItem('Write Templates','user_gen_write_template_all')
-  //   .addItem('Capture Templates','user_gen_capture_templates')
-  //   .addItem('Finals Templates','user_gen_write_template_final')
-  // )
-  // .addSeparator()
-  // .addItem('Broadcast','user_broadcast')
-  // .addSeparator()
-  // .addSubMenu(
-  //   ui.createMenu('Developer Options')
-  //     .addItem('Internal Initialize','dev_init_internal')
-  //     .addItem('Duplicate','dev_duplicate')
-  //     .addItem('Load / Clear','dev_load')
-  //     .addItem('New Tournament Instance','dev_init_external')
-  //     .addSubMenu(ui.createMenu('Staff')
-  //       .addItem("Add Staff",'dev_add_staff')
-  //       .addItem('Clear Staff','dev_clear_staff')
-  //     )
-  //   )
-  // .addToUi();
+  var ui = get_ui();
+  Logger.log(`This file was opened by: [${user_get_id()}]`);
 
-  // ui.createMenu('KYPT Chatbot')
-  //   .addItem('Activate Chatbot', 'user_show_chatbot')
-  //   .addToUi();
+  // INIT (initial)
+  if(is_new()){
+    ui.createMenu("INITIALIZE")
+      .addItem('Initialize Scoring System','initGate') //TODO: implement initGate
+      .addToUi();
+    ui.alert('This document was opened for the first time. Please Initialize with the dropdown menu above.')
+    return;    
+  }
+  // INIT
+  ui.createMenu('INIT')
+    .addItem('External (new instance)','dev_init_external') //TODO: dev_init_external
+    .addItem('Internal (metadata)'    ,'dev_init_internal') //TODO: dev_init_internal
+    .addToUi();
 
+  // GEN
   ui.createMenu('GEN')
     .addItem('Populate DATA','dev_populate_data')
     .addItem('Unpopulate DATA','dev_unpopulate_data')
     .addItem('Repopulate DATA','dev_repopulate_data')
     .addItem('Refresh Cell Values','dev_refresh_ss')
     .addToUi();
+  
+  // STAFF
+  ui.createMenu('STAFF')
+    .addItem("Add Staff",'dev_add_staff') //TODO
+    .addItem('Clear Staff','dev_clear_staff') //TODO
+    .addToUi();
+  
+  // DOC
+  ui.createMenu('DOC') //TODO(messy)
+    .addItem('Draw','user_gen_draw')
+    .addItem('Leaderboard Status','user_gen_pf_status')
+    .addItem('Tournament Progression Status','user_gen_database')
+    .addItem('PF4 Questions Verdict','user_gen_pf4_problems')
+    .addItem('PF##, RM##', 'user_gen_pfrm')
+    .addItem('Total Summary of PF','user_gen_pf_summary')
+    .addItem('Finals','user_gen_final')
+    .addSeparator()
+    .addItem('Write Templates','user_gen_write_template_all')
+    .addItem('Capture Templates','user_gen_capture_templates')
+    .addItem('Finals Templates','user_gen_write_template_final')
+    .addToUi();
+
+  // CHATBOT
+  ui.createMenu('CHATBOT')
+    .addItem('Activate Chatbot', 'user_show_chatbot')
+    .addToUi();
+
+  // UTIL
+  ui.createMenu('UTIL')
+    .addItem('make_relative','make_relative') //TODO: direct porting?
+    .addToUi();
+
+
 }
 
 /**
@@ -127,7 +132,8 @@ function userGate(mode = 'user'){
  * @param {Button} trueButton the botton that corresponds to true
  * @return{(boolean|string)} returns the input text if the trueButton is pressed, false if not.
  */
-function promptUser(title,subtitle,buttons = ui.ButtonSet.OK_CANCEL,trueButton = ui.Button.OK){  
+function promptUser(title,subtitle,buttons = get_ui().ButtonSet.OK_CANCEL,trueButton = get_ui().Button.OK){  
+  var ui = get_ui();
   var result = ui.prompt(title,subtitle,buttons);
   if (result.getSelectedButton()==trueButton){
     return result.getResponseText();
@@ -143,7 +149,8 @@ function promptUser(title,subtitle,buttons = ui.ButtonSet.OK_CANCEL,trueButton =
  * @param {Button} trueButton the botton that corresponds to true
  * @return{boolean} returns if the trueButton is pressed
  */
-function askUser(text,ButtonSet = ui.ButtonSet.YES_NO,trueButton = ui.Button.YES){
+function askUser(text,ButtonSet = get_ui().ButtonSet.YES_NO,trueButton = get_ui().Button.YES){
+  var ui = get_ui();
   if(ui.alert(text,ButtonSet) == trueButton){
     return true;
   }
@@ -161,8 +168,8 @@ function htmlString_result(doc,pdf){
               '">Download PDF</a> </div>';
 }
 
-
 function dev_populate_data(){
+  var ui = get_ui();
   if(userGate('dev') == false){return false;}
   populate_data()
   ui.alert("Run [Refresh Cell Values] to have formulas working")
@@ -176,6 +183,7 @@ function dev_unpopulate_data(){
 }
 
 function dev_repopulate_data(){
+  var ui = get_ui();
   if(userGate('user') == false){return false;}  
   repopulate_data()
   ui.alert("Run [Refresh Cell Values] to have formulas working")
@@ -187,4 +195,11 @@ function dev_refresh_ss(){
   refresh_calc(); 
   SpreadsheetApp.flush()
   return true
+}
+
+function user_show_chatbot() {
+  var ui = get_ui();
+  if(userGate('user') == false){return false;}
+  var html = HtmlService.createHtmlOutputFromFile('cb_ui').setTitle('PTSS Chatbot');
+  ui.showSidebar(html);
 }
