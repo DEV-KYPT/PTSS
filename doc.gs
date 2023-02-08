@@ -218,6 +218,70 @@ function gen_rm(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true,t
   return [doc,pdf]
 }
 
+function gen_rm_wt(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true){
+  var doc = null;
+
+  if(doc_in == undefined){doc =  doc_init(`[WRITE TEMPLATE] pf${pf}-rm${rm} ${get_now()}`);}
+
+  else{
+    doc = doc_in;
+    doc.getBody().appendPageBreak();
+  }
+  var body   = doc.getBody();
+  var doc_id = doc.getId();
+
+  
+
+}
+
+// function gen_rm(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true,typ = "r"){
+//   // typ(e): r: result, t-c: capture template, t-w: write template
+//   var doc = null;
+
+//   if(doc_in == undefined){
+//     if(typ=="t_c"){doc =  doc_init(`[CAPTURE TEMPLATE] pf${pf}-rm${rm}`                                ,"p",false,"t");}
+//     else       {doc =  doc_init(`[${get_full_name()}] pf${pf}-rm${rm} ${get_now()}`);}
+//   }
+//   // TODO: do logic for capture/write templates later.
+
+//   else{
+//     doc = doc_in;
+//     doc.getBody().appendPageBreak();
+//   }
+//   var body   = doc.getBody();
+//   var doc_id = doc.getId();
+
+//   var r = new Rm(pf,rm);  // the room instance
+//   r.pharse(1);
+
+//   var p_title = null
+//   //retrieve paragraph
+//   if(doc_in = undefined){p_title = doc.getParagraphs()[0];}
+//   else                  {p_title = doc.appendParagraph('');}
+//   p_title.appendText("PF Result")
+//   p_title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+//   var s_info = `PF ${r.pf_num}, Room ${r.rm_num} (${r.rm_loc})\nTimekeeper: ${r.tk}, Scorekeeper: ${r.sk}`;
+//   var p_info =  body.appendParagraph(s_info).setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+
+//   var s_note = 'Note: Numbers here are rounded, while the scoring system calculates un-rounded numbers.';
+//   var p_note = body.appendParagraph(s_note).setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setItalic(true).editAsText().setFontSize(8);
+
+//   var tb_tables = [];
+//   for(var stage of r.st.slice(1)){tb_tables.push(add_st(stage,body,typ));}
+
+//   var tb_summary = add_summary(r,body,typ);
+
+//   add_confirm(body,['Evaluating Timekeeper','Administrative Juror'],'p',2);
+
+//   var pdf = null;
+//   if(out_pdf){
+//     pdf = generate_pdf(doc);
+//     doc = DocumentApp.openById(doc_id);
+//   }
+//   return [doc,pdf]
+// }
+
 function gen_board(doc_in = undefined,out_doc = true,out_pdf = true,name = undefined,include_confirm = true){
   var b = new Board();
   b.pharse();
@@ -459,11 +523,53 @@ function gen_db(doc_in = undefined,out_doc = true,out_pdf = true,include_confirm
 
 }
 
+function gen_sel(doc_in = undefined,out_doc = true, out_pdf = true,include_confirm = false){
+  var doc = null;
+  var name = `[${get_full_name()}] selection verdict ${get_now()}`;
+
+  if(doc_in == undefined){doc =  doc_init(name);}
+  else{
+    doc = doc_in;
+    doc.appendPageBreak();
+  }
+  var body = doc.getBody();
+  var doc_id=doc.getId();
+
+  var sel = new Select();
+  sel.pharse(0);
+
+  var p_title = body.getParagraphs()[0];
+  p_title.appendText("Selection Problems Verdict");
+  p_title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+  var p_note = body.appendParagraph('See tournament regulations for rules on problems selection.');
+  p_note.setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setItalic(true);
+  p_note.editAsText().setFontSize(8);
+  body.appendParagraph('').setItalic(false).merge();
+
+  var a_sel = sel.roster;
+  for(var pf_num of sel.sel_pf_nums){
+    a_sel = attatch_2d([a_sel,sel.verdicts[pf_num]])
+  }
+  a_sel = [[" "," "].concat(sel.sel_pf_nums.map(e => `PF${e}`))].concat(a_sel)
+  // Logger.log(string_2d(a_sel))
+  a_sel = a_sel.map(row => row.map(e => String(e)));
+
+  var t_sel = body.appendTable(a_sel);
+  var cw_sel = [20,130].concat(Array(sel.sel_pf_nums.length).fill(30));
+  var st_sel = table_set_style(t_sel,cw_sel,10,undefined,true);
+
+  if(include_confirm){add_confirm(body,['Administrator'],'p',2);}
+
+  var pdf = null;
+  if(out_pdf){
+    pdf = generate_pdf(doc);
+    doc = DocumentApp.openById(doc_id);
+  }
+  return [doc,pdf]
+}
+
 // TODO
-// function gen_select(){}
-
-// function gen_final(){}
-
 // typ options for gen_rm
 // function populate_capture_templates(){}
 // function populate_write_templates(){}

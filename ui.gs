@@ -3,7 +3,7 @@
  * [ui] Automatically triggered function for opening the document (also when refreshed). Contains all frontend handles
  * @return {null}
  */
-function onOpen(){ // TODO: implement workaround with Session.getTemporaryActiveUserKey() 
+function onOpen(){
   var ui   = get_ui();
   var id   = user_get_id();
   var temp_string = '';
@@ -35,7 +35,7 @@ function onOpen(){ // TODO: implement workaround with Session.getTemporaryActive
   Logger.log(`User: [${cred['NAME']}] <${id}> (${cred['POS']}) {${temp_string}}`);
 
   // Gate for source
-  source_gate(ui,id,cred); // TODO make source_gate possible in onOpen context
+  source_gate(ui,id,cred);
 
   // INIT
   if(cred["SCRIPT"]["INIT"]){ui_show_init(ui);}
@@ -112,8 +112,12 @@ function onOpen(){ // TODO: implement workaround with Session.getTemporaryActive
 
   function ui_show_util(ui){
     ui.createMenu('UTIL')
-      .addItem('Make Formulas Relative','ui_make_relative')
+      .addItem(`Hide Private Sheets`,'ui_hide_sheets')
+      .addItem('Unhide Private Sheets','ui_unhide_sheets')
+      .addSeparator()
       .addItem('Read Properties','ui_read_props')
+      .addSeparator()
+      .addItem('Make Formulas Relative','ui_make_relative')
       .addToUi();
   }
 
@@ -201,15 +205,21 @@ function ui_ask(text,ButtonSet = get_ui().ButtonSet.YES_NO,trueButton = get_ui()
 
 // html maker for ui display
 function html_doc_specs(doc,pdf){
-  var html_output = `<div style="font-family:Arial; text-align:center">"`;
+  var doc_file = DriveApp.getFileById(doc.getId());
+  var parent_folder = doc_file.getParents().next();
+
+  var html_output = `<div style="font-family:Arial; text-align:center">`;
   html_output += `${doc.getName()}<br><br>`
-  html_output += `<a href = "${get_prop_value("result-url")}" target = "_blank">Open Folder</a>  `;
+  html_output += `<a href = "${parent_folder.getUrl()}" target = "_blank">Open Folder</a>  `;
   html_output += `<a href = "${doc.getUrl()}" target = "_blank">Open Doc</a>  `;
   html_output += `<a href = "${pdf.getDownloadUrl()}" target = "_blank">Download PDF</a>`;
   html_output += `</div>`;
   return html_output;
 }
 
+function ui_html_dialog(input_html,ui = get_ui(),title = "HTML DIALOG",size = [420,100]){
+  ui.showModalDialog(HtmlService.createHtmlOutput(input_html).setWidth(size[0]).setHeight(size[1]), title);
+}
 
 // *************** UI functions ***************
 
@@ -317,44 +327,34 @@ function ui_gen_draw(){
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
   
-  get_ui().alert("TODO");
+  var [doc,pdf] = gen_draw();
+  var doc_html = html_doc_specs(doc,pdf);
+  ui_html_dialog(doc_html,ui,"Document(s) Generated")
+
   return true;
 }
-
-/** function user_gen_draw(){
-  if(userGate('user') == false){return false;}
-  var [doc,pdf] = gen_draw();
-  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Document Generation Successful');
-}*/
 
 function ui_gen_board(){
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
   
-  get_ui().alert("TODO");
+  var [doc,pdf] = gen_board();
+  var doc_html = html_doc_specs(doc,pdf);
+  ui_html_dialog(doc_html,ui,"Document(s) Generated")
+
   return true;
 }
-
-/** function user_gen_pf_status(){
-  if(userGate('user') == false){return false;}
-  var [doc,pdf] = gen_pf_status();
-  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Document Generation Successful');
-}*/
 
 function ui_gen_db(){
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
-  
-  get_ui().alert("TODO");
+
+  var [doc,pdf] = gen_db();
+  var doc_html = html_doc_specs(doc,pdf);
+  ui_html_dialog(doc_html,ui,"Document(s) Generated")
+
   return true;
 }
-
-/** 
-function user_gen_database(){
-  if(userGate('user') == false){return false;}
-  var [doc,pdf] = gen_database();
-  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Document Generation Successful');
-}*/
 
 function ui_gen_sel(){
   var ui = get_ui();
@@ -374,39 +374,35 @@ function ui_gen_sel(){
 function ui_gen_rm(){
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
-  
-  get_ui().alert("TODO");
+
+  var result = ui_prompt("Enter PF-Room","PF 2, Room 4 : [2-4]");
+  if(result == false){ui.alert("Cancelled");return;}
+
+  var [pf_num,rm_num] = result.split('-');
+
+  var [doc,pdf] = gen_rm(pf_num,rm_num);
+  var doc_html = html_doc_specs(doc,pdf);
+  ui_html_dialog(doc_html,ui,"Document(s) Generated")
+
   return true;
 }
-
-/**function user_gen_pfrm(){
-  if(userGate('user') == false){return false;}
-//  ui.alert("user_gen_pfrm() called");
-  var pf = ui_prompt("Enter PF Number","1,2,3,etc.");
-  var rm = ui_prompt("Enter Room Number","1,2,3 etc.");
-  var [doc,pdf] = gen_pfrm(pf,rm,undefined,true,true);
-  //ui.alert(`Document Successfully Generated!\n${  DriveApp.getFolderById(PropertiesService.getDocumentProperties().getProperty('folderID_result')).getUrl()}`);
-  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Document Generation Successful');
-} */
 
 function ui_gen_pf(){
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
+
+  var pf_num = ui_prompt("Enter PF Number","1,2,3,etc.");
+  if(pf_num == false){ui.alert("Cancelled");return;}
+  pf_num = Number(pf_num);
   
-  get_ui().alert("TODO");
+  var [doc,pdf] = gen_pf(pf_num);
+  var doc_html = html_doc_specs(doc,pdf);
+  ui_html_dialog(doc_html,ui,"Document(s) Generated")
+
   return true;
 }
 
-/**function user_gen_pf_summary(){
-  if(userGate('user') == false){return false;}
-  var pf = ui_prompt("Enter PF Number","1,2,3,etc.");
-  var total_rm = ui_prompt("Enter Total Number of Rooms","1,2,3 etc.");
-  var [doc,pdf] = gen_pf_summary(pf,total_rm,true,true);
-  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Document Generation Successful');
-}
- */
-
-function ui_gen_fin(){
+function ui_gen_fin(){ // finals
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
   
@@ -416,7 +412,7 @@ function ui_gen_fin(){
 
 /** */
 
-function ui_gen_templates_w(){
+function ui_gen_templates_w(){ //write templates
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
   
@@ -433,7 +429,7 @@ function user_gen_write_template_all(){
   ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Template Generation Successful');
 }*/
 
-function ui_gen_templates_c(){
+function ui_gen_templates_c(){ //capture templates
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
   
@@ -463,21 +459,56 @@ function ui_display_chatbot(){
 }
 
 // UTIL scripts (complete)
+function ui_hide_sheets(){
+  var ui = get_ui();
+  if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
+
+  var ss = get_ss_spreadsheet();
+  var vis= get_visible_sheet_colors();
+
+  for(var sheet of ss.getSheets()){
+    if(!vis.includes(sheet.getTabColor())){
+      Logger.log(`[UI] Sheet ${sheet.getName()} Hidden.`);
+      sheet.hideSheet();
+    }
+  }
+
+  return true;
+}
+
+function ui_unhide_sheets(){
+  var ui = get_ui();
+  if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
+
+  var show_except = ["FINAL"];
+  var ss = get_ss_spreadsheet();
+
+  for(var sheet of ss.getSheets()){
+    if(sheet.isSheetHidden() && (!show_except.includes(sheet.getName()) )){
+      Logger.log(`[UI] Sheet ${sheet.getName()} Unhidden.`);
+      sheet.showSheet();
+    }
+  }
+
+  return true;
+}
+
+function ui_read_props(){
+  var ui = get_ui();
+  if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
+  
+  var s_props = read_props('','sdu',true);
+  ui.alert(s_props);
+  return true;
+}
+
 function ui_make_relative(){
   var ui = get_ui();
-  if(!check_cred("CHATBOT")){ui.alert("Unauthorized.");return false;}
+  if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
   
   if(!ui_ask('This will affect all formulas within the activated range. Continue?')){ui.alert("Cancelled");return false;}
   make_relative();
   return true;
 }
 
-function ui_read_props(){
-  var ui = get_ui();
-  if(!check_cred("CHATBOT")){ui.alert("Unauthorized.");return false;}
-  
-  var s_props = read_props('','sdu',true);
-  ui.alert(s_props);
-  return true;
-}
 

@@ -58,37 +58,17 @@ function main(){
   // Logger.log(""+c);
 
   /////////////////////////////////////////////////////////////
+  var sel = new Select();
+  sel.pharse();
+  Logger.log(""+sel)
+
+  /////////////////////////////////////////////////////////////
   // var conv = new Chat(1,2,3);
   // conv.add_cmd('c')
   // Logger.log(''+conv);
 
-  /////////////////////////////////////////////////////////////
-  // var s = JSON.stringify(
-  //   {
-  //     "DOC":{
-  //       "Scoring System": "edit",
-  //       "Results": "view",
-  //       "Templates": "none",
-  //     },
-  //     "SCRIPT":{
-  //       "INIT"    : false,
-  //       "GEN"     : false,
-  //       "STAFF"   : false,
-  //       "DOC"     : false,
-  //       "CHATBOT" : false,
-  //       "UTIL"    : false,
-  //     },
-  //   }
-  // )
-  // Logger.log(s)
-
-  // var obj = JSON.parse(s);
-  // Logger.log(obj)
-  var ss_file = DriveApp.getFileById(get_prop_value("ss-id"       ,'d'));
-  ss_file.setShareableByEditors(false).setSharing(DriveApp.Access.PRIVATE,DriveApp.Permission.NONE);
 
 }
-
 
 
 

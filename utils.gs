@@ -102,7 +102,7 @@ function string_2d(array=[[null]],name='',pre_tabs = 0,output_dims = false,max_s
 
   var output = '';
 
-  var label = name;
+  var label = String(name);
   if(output_dims){label += `[${array.length}][${array[0].length}]`;}
   if(name != '' || (output_dims)){
     if(line_len >= label.length){output += `${'\t'.repeat(pre_tabs)}${label}${' '.repeat(line_len-label.length)}\n`}

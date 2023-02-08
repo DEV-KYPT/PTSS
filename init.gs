@@ -96,5 +96,4 @@ function init_internal(){
 }
 
 //TODO: Duplicate Capability
-//TODO: STAFF ADMIN
 

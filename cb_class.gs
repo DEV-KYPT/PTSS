@@ -160,6 +160,7 @@ class Chat{
       }; //2d tables for representing available questions
 
     // add response to the first quote object (which must always be "init")
+    this.c.highlight();
     this.quotes[0].resp = `[ PF${this.pf} RM${this.rm} ST${this.st} ] Initialized`;
     if(this.overwrite)    {this.quotes[0].resp += html("\n[WARN] Ignoring written data. [w] command will overwrite them.",'warn');}
     this.quotes[0].resp += this.read_relaxed(this.relaxed_rules,true);

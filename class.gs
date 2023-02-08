@@ -311,7 +311,7 @@ class Challenge{
     this.penalty= null;  //true if weight penalty was inflicted.
     this.weight = null;  //calculated reporter weight
 
-    // range variables (pharsed later at write.)
+    // range variables (used for write.)
     this.rej_range = null;
     this.acc_range = null;
   }
@@ -353,7 +353,6 @@ class Challenge{
     this.nrej    = this.constraints["a"].length + this.rej.length
     this.weight  = raw[2][19];
     this.penalty = this.nrej > this.ss.getRange("RULE_SCR_AR").getValue();
-
   }
 
   interpret(lv = 0){return this.toString();}
@@ -416,6 +415,13 @@ class Challenge{
     return done;
   }
 
+  highlight(){
+    var st_range = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`);
+    var sheet_data = st_range.getSheet();
+    sheet_data.getRange(sheet_data.getMaxRows(),sheet_data.getMaxColumns()).activate() // activate bottom right cell
+    st_range.activate();
+  }
+
   add_rej(p){
     this.rej.push(p);
     this.nrej += 1;
@@ -426,14 +432,16 @@ class Challenge{
     remove_item(this.available['d'],p);
   }
 
-  write(){ //write the current .rej & .acc values to the appropriate location.
+  write(with_cb = true){ //write the current .rej & .acc values to the appropriate location.  
     var raw_range  = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`);
     var sheet_data = raw_range.getSheet()
     this.rej_range = sheet_data.getRange(raw_range.getRow(),raw_range.getColumn()+5,1,11);
     this.acc_range = sheet_data.getRange(raw_range.getRow(),raw_range.getColumn()+17);
-    
+
     this.rej_range.setValues(resize_2d([this.rej],[1,11],""));
     this.acc_range.setValue(this.acc);
+
+    if(with_cb){sheet_data.getRange(raw_range.getRow()+7,raw_range.getColumn()-1).setValue('C')}
     return true;
   }
 
@@ -479,14 +487,14 @@ class Core{
 
   is_pharsed(){return this.content_prbs != null;}
 
-  pharse(){
+  pharse(lv = 0){
     if(this.is_pharsed()){return;}
     this.content_prbs  = this.ss.getRange("CORE_OUT_PRBS" ).getValues();
     this.content_names = this.ss.getRange("CORE_OUT_NAMES").getValues();
     this.content_teams = this.ss.getRange("CORE_OUT_TEAMS").getValues();
   }
 
-  interpret(){return this.toString();}
+  interpret(lv = 0){return this.toString();}
   
   toString(){
     var output = `Core`
@@ -499,6 +507,48 @@ class Core{
 
 // Separate class defined for pharsing selection verdict ("SELECT") information
 class Select{
+  constructor(){
+    this.ss = get_ss_spreadsheet();
+    this.sel_pf_nums = [];
+    this.roster = null;
+    this.verdicts = {};
+  }
+
+  is_pharsed(){return this.roster != null;}
+
+  pharse(lv = 0){
+    if(this.is_pharsed()){return;}
+    var sel_raw   = [null].concat(this.ss.getRange("RULE_PRB_SEL" ).getValues()[0]); //used null as first element for 1-indexing
+    for(var pf_num = 1;pf_num < sel_raw.length; pf_num ++){
+      if(sel_raw[pf_num] == true){this.sel_pf_nums.push(pf_num);}
+    }
+    this.roster        = this.ss.getRange("DRAW_ROSTER").getValues();
+
+    for(var pf_num of this.sel_pf_nums){
+      this.verdicts[pf_num] = this.ss.getRange(`SELECT_VERDICT_P${pf_num}`).getValues();
+    }
+    // Logger.log(this.sel_pf_nums)
+
+  }
+
+  interpret(lv = 0){return this.toString();}
+  
+  toString(){
+    var output = `Select`
+    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+
+    var a_outputs = [this.roster];
+
+    for(var pf_num of this.sel_pf_nums){a_outputs.push(this.verdicts[pf_num])}
+
+    output += `\n${multistring_2d(a_outputs,["ROSTER"].concat(this.sel_pf_nums.map(e => `P${e}`)),0,false,6)}`
+    return output  
+  }
+
+}
+
+// Separate class defined for pharsing Final round
+class Final{
   //TODO
 }
 
