@@ -3,126 +3,168 @@
  * [ui] Automatically triggered function for opening the document (also when refreshed). Contains all frontend handles
  * @return {null}
  */
-function onOpen(){
-  var ui = get_ui();
-  Logger.log(`This file was opened by: [${user_get_id()}]`);
+function onOpen(){ // TODO: implement workaround with Session.getTemporaryActiveUserKey() 
+  var ui   = get_ui();
+  var id   = user_get_id();
+  var temp_string = '';
 
   // INIT (initial)
   if(is_new()){
     ui.createMenu("INITIALIZE")
-      .addItem('Initialize Scoring System','initGate') //TODO: implement initGate
+      .addItem('Initialize Scoring System','new_init')
       .addToUi();
-    ui.alert('This document was opened for the first time. Please Initialize with the dropdown menu above.')
+    ui.alert('This document was opened for the first time.\nPlease boot the system the dropdown menu above.')
     return;    
   }
-  // INIT
-  ui.createMenu('INIT')
-    .addItem('External (new instance)','dev_init_external') //TODO: dev_init_external
-    .addItem('Internal (metadata)'    ,'dev_init_internal') //TODO: dev_init_internal
-    .addToUi();
 
-  // GEN
-  ui.createMenu('GEN')
-    .addItem('Populate DATA','dev_populate_data')
-    .addItem('Unpopulate DATA','dev_unpopulate_data')
-    .addItem('Repopulate DATA','dev_repopulate_data')
-    .addItem('Refresh Cell Values','dev_refresh_ss')
-    .addToUi();
-  
+  if(id == ''){
+    temp_string = Session.getTemporaryActiveUserKey();
+    id = get_id_from_register(temp_string);
+    if(id == null){id = 'ANON'}
+  }
+  Logger.log(`${get_full_name()} (PTSS ${VERSION}) was opened. [${id}]`);
+  if(id == "ANON"){ //anonymous user or first time opening for this user
+    ui.createMenu(`PTSS ${VERSION}`)
+      .addItem('Activate','ui_activate')
+      .addToUi()
+    ui.alert(`Welcome to PTSS ${VERSION}!\nActivate scripts with the dropdown menu above.\n(Press ["PTSS ${VERSION}"] > [Activate])`);
+    return;
+  }
+
+  var cred = get_cred(id);
+  Logger.log(`User: [${cred['NAME']}] <${id}> (${cred['POS']}) {${temp_string}}`);
+
+  // Gate for source
+  source_gate(ui,id,cred); // TODO make source_gate possible in onOpen context
+
+  // INIT
+  if(cred["SCRIPT"]["INIT"]){ui_show_init(ui);}
+  // ui_show_init(ui);
+
+  // SPAWN
+  if(cred["SCRIPT"]["SPAWN"]){ui_show_spawn(ui);}
+  // ui_show_spawn(ui);
+
   // STAFF
-  ui.createMenu('STAFF')
-    .addItem("Add Staff",'dev_add_staff') //TODO
-    .addItem('Clear Staff','dev_clear_staff') //TODO
-    .addToUi();
-  
+  if(cred["SCRIPT"]["STAFF"]){ui_show_staff(ui);}
+  // ui_show_staff(ui);
+
   // DOC
-  ui.createMenu('DOC') //TODO(messy)
-    .addItem('Draw','user_gen_draw')
-    .addItem('Leaderboard Status','user_gen_pf_status')
-    .addItem('Tournament Progression Status','user_gen_database')
-    .addItem('PF4 Questions Verdict','user_gen_pf4_problems')
-    .addItem('PF##, RM##', 'user_gen_pfrm')
-    .addItem('Total Summary of PF','user_gen_pf_summary')
-    .addItem('Finals','user_gen_final')
-    .addSeparator()
-    .addItem('Write Templates','user_gen_write_template_all')
-    .addItem('Capture Templates','user_gen_capture_templates')
-    .addItem('Finals Templates','user_gen_write_template_final')
-    .addToUi();
+  if(cred["SCRIPT"]["DOC"]){ui_show_doc(ui);}
+  // ui_show_doc(ui);
 
   // CHATBOT
-  ui.createMenu('CHATBOT')
-    .addItem('Activate Chatbot', 'user_show_chatbot')
-    .addToUi();
+  if(cred["SCRIPT"]["CHATBOT"]){ui_show_chatbot(ui);}
+  // ui_show_chatbot(ui);
 
   // UTIL
-  ui.createMenu('UTIL')
-    .addItem('make_relative','make_relative') //TODO: direct porting?
-    .addToUi();
-
+  if(cred["SCRIPT"]["UTIL"]){ui_show_util(ui);}
+  // ui_show_util(ui);
 
 }
 
-/**
- * [ui] Check in the open of document of this script needs to be initialized. (Different logical flow)
- * 
- * @return {boolean} if the gate is passed
- */
-function initGate(){
-  // if(PropertiesService.getDocumentProperties().getProperty('status') == null){
-  //   Logger.log("This file was initialized by: " + Session.getActiveUser().getEmail() +" ");
-  //   Logger.log("Internal Initialize Called (first time open)");
-  //   read_all_properties();
-  //   init_internal();
-  //   Logger.log("System Initialized Sucessfully.");
-  //   ui.alert(`Welcome to ${PropertiesService.getDocumentProperties().getProperty('category')}-${PropertiesService.getDocumentProperties().getProperty('callname')} Scoring System!\n Refresh page to access scripts.`)
-  //   // onOpen();
-  //   return false
-  // }
-  // else if(PropertiesService.getDocumentProperties().getProperty('status') == 'SOURCE'){
-  //   var result = promptUser(
-  //     "Source Editing Mode","Editing this file will change all future instances. Do you know what you are doing?",
-  //     ButtonSet = ui.ButtonSet.YES_NO,trueButton = ui.Button.YES
-  //   );
-  //   if(result != PropertiesService.getScriptProperties().getProperty('_devPw') &&
-  //     PropertiesService.getScriptProperties().getProperty('developers').search(Session.getActiveUser().getEmail()) == -1){
-  //       ui.alert("Authentication Unsuccessful.");
-  //       Logger.log("SOURCE authentication FAILED at: "+now);
-  //       return false
-  //   }
-  //   Logger.log("SOURCE authentication successful at: "+now);
-  //   return true
-  // }
-  // return true
+// ui menu-adding functions
+
+  function ui_show_init(ui){
+    ui.createMenu('INIT')
+      .addItem('External (new instance)','ui_init_external')
+      .addItem('Internal (metadata)'    ,'ui_init_internal')
+      .addToUi();
+  }
+
+  function ui_show_spawn(ui){
+    ui.createMenu('SPAWN')
+      .addItem('Spawn Instance'      ,'ui_spawn'     )
+      .addItem('Unspawn Instance'    ,'ui_unspawn'   )
+      .addItem('Respawn Instance'    ,'ui_respawn'   )
+      .addItem('Refresh Cell Values' ,'ui_refresh_ss')
+      .addToUi();
+  }
+
+  function ui_show_staff(ui){
+    ui.createMenu('STAFF')
+      .addItem("Add Staff",'ui_add_staff')
+      .addItem('Clear Staff','ui_clear_staff') 
+      .addToUi();
+  }
+
+  function ui_show_doc(ui){
+    ui.createMenu('DOC')
+      .addItem('Draw'            ,'ui_gen_draw'   )
+      .addItem('Scoreboard'      ,'ui_gen_board'  )
+      .addItem('Tournament Data' ,'ui_gen_db'     )
+      .addItem('Selection Stages','ui_gen_sel'    )
+      .addItem('Room Summary'    ,'ui_gen_rm'     )
+      .addItem('PF Summary'      ,'ui_gen_pf'     )
+      .addItem('Final Round'     ,'ui_gen_fin'    )
+      .addSeparator()
+      .addItem('Write Templates'  ,'ui_gen_templates_w')
+      .addItem('Capture Templates','ui_gen_templates_c')
+      // .addItem('Finals Templates' ,'ui_gen_templates_f')
+      .addToUi();
+  }
+
+  function ui_show_chatbot(ui){
+    ui.createMenu('CHATBOT')
+      .addItem('Activate Chatbot', 'ui_display_chatbot')
+      .addToUi();
+  }
+
+  function ui_show_util(ui){
+    ui.createMenu('UTIL')
+      .addItem('Make Formulas Relative','ui_make_relative')
+      .addItem('Read Properties','ui_read_props')
+      .addToUi();
+  }
+
+//
+
+// function for new document initialization
+function new_init(){
+  var ui = get_ui();
+  // var id = user_get_id();
+  // var cred = get_cred();  
+  Logger.log(`This file was initialized by: ${user_get_id()}`);
+  init_internal();
+  ui.alert(`Say hello to [${get_full_name}]!\nRefresh page to access scripts.\n(PTSS ${VERSION})`);
 }
 
-/**
- * [ui] Credential check on frontend for authorization in certain functions
- * 
- * @param {string} mode supported modes: 'dev' (developer only access), 'user" (public access)
- * @return{boolean} returns true if gate is passed
- */
-function userGate(mode = 'user'){
-  // Logger.log("KYPT Scoring System Script was Run : " + Session.getActiveUser().getEmail() + " as " + mode);
-  // if(mode.search('dev') != -1){
-  //   if(Session.getActiveUser().getEmail() == ''){}
-  //   else if(PropertiesService.getScriptProperties().getProperty('developers').search(Session.getActiveUser().getEmail()) != -1){
-  //     return true
-  //   }
-  //   var result  = promptUser("Developer Sign-In","Your credentials are not recognized as developer. Please enter Password.");
-  //   if(result == PropertiesService.getScriptProperties().getProperty('_devPw')){
-  //     return true
-  //   }
-  //   ui.alert("Invalid Password. Access Denied.");
-  //   Logger.log("User Failed Developer Identification");
-  //   return false;
-  // }
-  // else if(mode.search('user') != -1){
-  //   return true;
-  // }
-  // return false;
+// controlling source integrity
+function source_gate(ui,id,cred){
+  if(get_prop_value('status','d') != 'SOURCE'){return true;}
+  var pass = false;
+
+  var result = ui_prompt(
+    "Source Editing Mode","Editing this file will change all future instances. Do you know what you are doing?",
+    ButtonSet = ui.ButtonSet.YES_NO,trueButton = ui.Button.YES
+  );
+
+  if(is_dev(id) || result == "rememberkypt2020"){pass = true;} // if you know what this means, you deserve developer rights.
+  if(result == "sabotage"){pass = false;}
+
+  if(pass){
+    Logger.log(`SOURCE authentication SUCCESS: id:${id}`);
+    return true;
+  }
+  Logger.log(`SOURCE authentication FAILED: id:${id}`);
+  // jam the ui if not passed.
+  while(true){ui.alert("Authentication Unsuccessful.");}
 }
 
+// first-time activation function (grants permissions)
+function ui_activate(){
+  var id = user_get_id();
+  var temp_string = Session.getTemporaryActiveUserKey();
+
+  if(id == ''){ui.alert('Cannot use scripts anonymously');return false;}
+
+  set_register_entry(temp_string,id);
+  var cred = get_cred(id);
+  Logger.log(`[ACTIVATE] User [${id}] was activated with key [${temp_string}]`)
+  get_ui().alert(`Activation Successful\n[${cred['NAME']}] <${id}> (${cred['POS']})\nRefresh Page to access scripts.`);
+}
+
+// wrappers for ui elements
 /**
  * [ui] Wrapper for text input dialog boxes
  * 
@@ -132,7 +174,7 @@ function userGate(mode = 'user'){
  * @param {Button} trueButton the botton that corresponds to true
  * @return{(boolean|string)} returns the input text if the trueButton is pressed, false if not.
  */
-function promptUser(title,subtitle,buttons = get_ui().ButtonSet.OK_CANCEL,trueButton = get_ui().Button.OK){  
+function ui_prompt(title,subtitle,buttons = get_ui().ButtonSet.OK_CANCEL,trueButton = get_ui().Button.OK){  
   var ui = get_ui();
   var result = ui.prompt(title,subtitle,buttons);
   if (result.getSelectedButton()==trueButton){
@@ -149,7 +191,7 @@ function promptUser(title,subtitle,buttons = get_ui().ButtonSet.OK_CANCEL,trueBu
  * @param {Button} trueButton the botton that corresponds to true
  * @return{boolean} returns if the trueButton is pressed
  */
-function askUser(text,ButtonSet = get_ui().ButtonSet.YES_NO,trueButton = get_ui().Button.YES){
+function ui_ask(text,ButtonSet = get_ui().ButtonSet.YES_NO,trueButton = get_ui().Button.YES){
   var ui = get_ui();
   if(ui.alert(text,ButtonSet) == trueButton){
     return true;
@@ -157,49 +199,285 @@ function askUser(text,ButtonSet = get_ui().ButtonSet.YES_NO,trueButton = get_ui(
   return false;
 }
 
-
-function htmlString_result(doc,pdf){
-  return '<div style="font-family:Arial; text-align:center">'+doc.getName()+'<br><br><a href = "'+
-    PropertiesService.getDocumentProperties().getProperty('folderURL_result')+
-      '" target = "_blank">Open Folder</a>  <a href = "'+
-        doc.getUrl()+
-          '"target = "_blank">Open Docs</a>  <a href = "'+
-            pdf.getDownloadUrl()+
-              '">Download PDF</a> </div>';
+// html maker for ui display
+function html_doc_specs(doc,pdf){
+  var html_output = `<div style="font-family:Arial; text-align:center">"`;
+  html_output += `${doc.getName()}<br><br>`
+  html_output += `<a href = "${get_prop_value("result-url")}" target = "_blank">Open Folder</a>  `;
+  html_output += `<a href = "${doc.getUrl()}" target = "_blank">Open Doc</a>  `;
+  html_output += `<a href = "${pdf.getDownloadUrl()}" target = "_blank">Download PDF</a>`;
+  html_output += `</div>`;
+  return html_output;
 }
 
-function dev_populate_data(){
+
+// *************** UI functions ***************
+
+// INIT scripts (complete)
+function ui_init_external(){
   var ui = get_ui();
-  if(userGate('dev') == false){return false;}
-  populate_data()
-  ui.alert("Run [Refresh Cell Values] to have formulas working")
-  return true
+  if(!check_cred("INIT")){ui.alert("Unauthorized.");return false;}
+
+  if(is_spawned()){ui.alert("SOURCE must be unspawned to create new Instance.");return false;}
+
+  var input = ui_prompt(`Enter Tournament Name ([Category-Callname])"`,`"KYPT-2023", "I-YPT-2020", etc.`);
+  if(input == false){ui.alert("Cancelled");return false;}
+  var category = input.split('-')[0];
+  var callname = input.split('-')[1];
+
+  if(!ui_ask(`Create Tournament Instance [${category}-${callname}] ?`)){ui.alert("Cancelled");return false;}
+
+  init_external(category,callname);
+  ui.alert(`Tournament Instance [${category}-${callname}] Successfully Created.`)
+  return true;
 }
 
-function dev_unpopulate_data(){
-  if(userGate('user') == false){return false;}  
-  unpopulate_data()
-  return true
-}
-
-function dev_repopulate_data(){
+function ui_init_internal(){
   var ui = get_ui();
-  if(userGate('user') == false){return false;}  
-  repopulate_data()
-  ui.alert("Run [Refresh Cell Values] to have formulas working")
-  return true
+  if(!check_cred("INIT")){ui.alert("Unauthorized.");return false;}
+  
+  init_internal();
+  return true;
 }
 
-function dev_refresh_ss(){
-  if(userGate('user') == false){return false;} 
+// SPAWN scripts (complete)
+function ui_spawn(){
+  var ui = get_ui();
+  if(!check_cred("SPAWN")){ui.alert("Unauthorized.");return false;}
+
+  if(!ui_ask("This script will take a few minutes to run. Are you ready to proceed?")){ui.alert("SPAWN Cancelled");return false;}
+  spawn();
+  ui.alert("Run [SPAWN]>[Refresh Cell Values] to activate spreadsheet formulas.")
+  return true;
+}
+
+function ui_unspawn(){
+  var ui = get_ui();
+  if(!check_cred("SPAWN")){ui.alert("Unauthorized.");return false;}
+
+  if(!ui_ask("This script will delete all DATA except PF1-RM1. Are you sure?")){ui.alert("UNSPAWN Cancelled");return false;}  
+  unspawn();
+  return true;
+}
+
+function ui_respawn(){
+  var ui = get_ui();
+  if(!check_cred("SPAWN")){ui.alert("Unauthorized.");return false;}
+  
+  if(!ui_ask("This script will take a few minutes to run / overwrite all data in tournament with that of PF1-RM1.Are you ready to proceed?")){ui.alert("RESPAWN Cancelled");return false;}
+  respawn();
+  ui.alert("Run [SPAWN]>[Refresh Cell Values] to activate spreadsheet formulas.")
+  return true;
+}
+
+function ui_refresh_ss(){
+  var ui = get_ui();
+  if(!check_cred("SPAWN")){ui.alert("Unauthorized.");return false;}
+
   refresh_calc(); 
-  SpreadsheetApp.flush()
-  return true
+  SpreadsheetApp.flush();
+  return true;
 }
 
-function user_show_chatbot() {
+// STAFF scripts
+function ui_add_staff(){
   var ui = get_ui();
-  if(userGate('user') == false){return false;}
-  var html = HtmlService.createHtmlOutputFromFile('cb_ui').setTitle('PTSS Chatbot');
-  ui.showSidebar(html);
+  if(!check_cred("STAFF")){ui.alert("Unauthorized.");return false;}
+
+  if(!ui_ask("This script will give access to all affilated staff. Continue?")){ui.alert("Cancelled");return false;}
+  repopulate_creds();
+  sync_access();
+  get_ui().alert("Staff members added.");
+  return true;
 }
+
+function ui_clear_staff(){
+  var ui = get_ui();
+  if(!check_cred("STAFF")){ui.alert("Unauthorized.");return false;}
+  
+  if(!ui_ask("This script will remove access to PTSS files from everone. Continue?")){ui.alert("Cancelled");return false;}
+  remove_access();
+  unpopulate_creds();
+  return true;
+}
+
+/**function dev_clear_staff(){
+  if(userGate('dev') == false){return false;}
+  var result = askUser('Clear all staff members? They will lose all access to documents.');
+  if(! result){
+    ui.alert('Canceled');
+    return false;
+  }
+  clear_staff();
+  ui.alert("All staff members cleared");
+} */
+
+// DOC scripts
+function ui_gen_draw(){
+  var ui = get_ui();
+  if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
+  
+  get_ui().alert("TODO");
+  return true;
+}
+
+/** function user_gen_draw(){
+  if(userGate('user') == false){return false;}
+  var [doc,pdf] = gen_draw();
+  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Document Generation Successful');
+}*/
+
+function ui_gen_board(){
+  var ui = get_ui();
+  if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
+  
+  get_ui().alert("TODO");
+  return true;
+}
+
+/** function user_gen_pf_status(){
+  if(userGate('user') == false){return false;}
+  var [doc,pdf] = gen_pf_status();
+  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Document Generation Successful');
+}*/
+
+function ui_gen_db(){
+  var ui = get_ui();
+  if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
+  
+  get_ui().alert("TODO");
+  return true;
+}
+
+/** 
+function user_gen_database(){
+  if(userGate('user') == false){return false;}
+  var [doc,pdf] = gen_database();
+  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Document Generation Successful');
+}*/
+
+function ui_gen_sel(){
+  var ui = get_ui();
+  if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
+  
+  get_ui().alert("TODO");
+  return true;
+}
+
+/**function user_gen_pf4_problems(){
+  if(userGate('user') == false){return false;}
+  var [doc,pdf] = gen_pf4_problems();
+  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Document Generation Successful');  
+}
+ */
+
+function ui_gen_rm(){
+  var ui = get_ui();
+  if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
+  
+  get_ui().alert("TODO");
+  return true;
+}
+
+/**function user_gen_pfrm(){
+  if(userGate('user') == false){return false;}
+//  ui.alert("user_gen_pfrm() called");
+  var pf = ui_prompt("Enter PF Number","1,2,3,etc.");
+  var rm = ui_prompt("Enter Room Number","1,2,3 etc.");
+  var [doc,pdf] = gen_pfrm(pf,rm,undefined,true,true);
+  //ui.alert(`Document Successfully Generated!\n${  DriveApp.getFolderById(PropertiesService.getDocumentProperties().getProperty('folderID_result')).getUrl()}`);
+  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Document Generation Successful');
+} */
+
+function ui_gen_pf(){
+  var ui = get_ui();
+  if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
+  
+  get_ui().alert("TODO");
+  return true;
+}
+
+/**function user_gen_pf_summary(){
+  if(userGate('user') == false){return false;}
+  var pf = ui_prompt("Enter PF Number","1,2,3,etc.");
+  var total_rm = ui_prompt("Enter Total Number of Rooms","1,2,3 etc.");
+  var [doc,pdf] = gen_pf_summary(pf,total_rm,true,true);
+  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Document Generation Successful');
+}
+ */
+
+function ui_gen_fin(){
+  var ui = get_ui();
+  if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
+  
+  get_ui().alert("TODO");
+  return true;
+}
+
+/** */
+
+function ui_gen_templates_w(){
+  var ui = get_ui();
+  if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
+  
+  get_ui().alert("TODO");
+  return true;
+}
+
+/** 
+function user_gen_write_template_all(){
+  if(userGate('user') == false){return false;}
+  var total_pf = ui_prompt("Enter Total Number of PF's","1,2,3,etc.");
+  var total_rm = ui_prompt("Enter Total Number of Rooms","1,2,3 etc.");
+  var [doc,pdf] = gen_write_template_all(total_pf,total_rm,true,true);
+  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Template Generation Successful');
+}*/
+
+function ui_gen_templates_c(){
+  var ui = get_ui();
+  if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
+  
+  get_ui().alert("TODO");
+  return true;
+}
+
+/** function user_gen_capture_templates(){
+  if(userGate('user') == false){return false;}
+  //gen_capture_templates(total_pf = 4,total_rm = 6,docs = true,pdf = false)
+  var total_pf = ui_prompt("Enter Total Number of PF's","1,2,3,etc.");
+  var total_rm = ui_prompt("Enter Total Number of Rooms","1,2,3 etc.");
+  gen_capture_templates(total_pf,total_rm,true,false);
+  ui.alert(`Capture templates successfully generated. Check [TEMPLATES] folder`);
+}
+*/
+
+
+// CHATBOT scripts (complete)
+function ui_display_chatbot(){
+  var ui = get_ui();
+  if(!check_cred("CHATBOT")){ui.alert("Unauthorized.");return false;}
+  
+  var cb_html = HtmlService.createHtmlOutputFromFile('cb_ui').setTitle(`PTSS ${VERSION} Chatbot`);
+  ui.showSidebar(cb_html);
+  return true;
+}
+
+// UTIL scripts (complete)
+function ui_make_relative(){
+  var ui = get_ui();
+  if(!check_cred("CHATBOT")){ui.alert("Unauthorized.");return false;}
+  
+  if(!ui_ask('This will affect all formulas within the activated range. Continue?')){ui.alert("Cancelled");return false;}
+  make_relative();
+  return true;
+}
+
+function ui_read_props(){
+  var ui = get_ui();
+  if(!check_cred("CHATBOT")){ui.alert("Unauthorized.");return false;}
+  
+  var s_props = read_props('','sdu',true);
+  ui.alert(s_props);
+  return true;
+}
+

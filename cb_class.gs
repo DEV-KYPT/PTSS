@@ -99,7 +99,7 @@ class Chat{
     var s_output = '';
     for(var q of this.quotes){s_output += `${q.serialize()}\n`;}
     // Logger.log(s_output)
-    set_property(this.prop_key,s_output,"s");
+    set_prop(this.prop_key,s_output,"s");
   }
 
   load(){

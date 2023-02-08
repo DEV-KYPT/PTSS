@@ -22,11 +22,12 @@ function init_external (category = "TEST",callname = get_now()){ //callname is a
   var new_ss_file  = DriveApp.getFileById(get_prop_value("ss-id","d")).makeCopy(ss_name,new_root);
   var new_ss       = SpreadsheetApp.openById(new_ss_file.getId());
 
-  new_ss_file.setShareableByEditors(false);
+  new_ss_file .setShareableByEditors(false).setSharing(DriveApp.Access.PRIVATE,DriveApp.Permission.NONE);;
+  new_result  .setShareableByEditors(false).setSharing(DriveApp.Access.PRIVATE,DriveApp.Permission.NONE);;
+  new_template.setShareableByEditors(false).setSharing(DriveApp.Access.PRIVATE,DriveApp.Permission.NONE);;
 
-  new_result  .setShareableByEditors(false);
-  new_template.setShareableByEditors(false);
-  
+  // new_ss_file.setSharing();
+
   // populate metadata for new sheet.
   var ext_props = [
     ['d','status'      ,`[${category}-${callname}] init from <${get_prop_value("status")}> at [${get_now()}]`],
@@ -56,7 +57,7 @@ function init_external (category = "TEST",callname = get_now()){ //callname is a
   Logger.log("EXTERNAL INITIALIZATION SUCCESSFUL. NEW TOURNAMENT CREATED");
 }
 
-function is_new(){ //check if internal init is done in current document (true if there are no properties set)
+function is_new(){ //check if internal init is done in current document (true if there are no props set)
   get_prop_value('status','d') == null;
 }
 
@@ -80,16 +81,18 @@ function init_internal(){
   // Logger.log(props_s)
   // Logger.log(props_d)
   // Logger.log(props_u)
-  set_properties(props_s,"s")
-  set_properties(props_d,"d")
-  set_properties(props_u,"u")
+  set_props(props_s,"s")
+  set_props(props_d,"d")
+  set_props(props_u,"u")
 
   // also propagate version information backwards (useful redundancy for working with SOURCE).
   ss.getRange("META_VERSION").setValue(VERSION);
   ss.rename(`[${ss.getRange("META_CATEGORY").getValue()}-${ss.getRange("META_CALLNAME").getValue()}] PTSS ${VERSION}`)
 
+  populate_creds(true); //populate credentials for developers
+
   Logger.log("Internal Initialization Successful.");
-  read_all_properties();
+  read_props();
 }
 
 //TODO: Duplicate Capability

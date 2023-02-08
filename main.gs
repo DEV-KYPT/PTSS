@@ -26,10 +26,10 @@ function main(){
   // s.pharse()
   // Logger.log(""+s)
 
-  var c = new Challenge(6,1,4);
-  c.pharse();
-  Logger.log(""+c)
-  Logger.log(c.select)
+  // var c = new Challenge(6,1,4);
+  // c.pharse();
+  // Logger.log(""+c)
+  // Logger.log(c.select)
   /////////////////////////////////////////////////////////////
   // var b = new Board()
   // b.pharse()
@@ -61,7 +61,32 @@ function main(){
   // var conv = new Chat(1,2,3);
   // conv.add_cmd('c')
   // Logger.log(''+conv);
-  
+
+  /////////////////////////////////////////////////////////////
+  // var s = JSON.stringify(
+  //   {
+  //     "DOC":{
+  //       "Scoring System": "edit",
+  //       "Results": "view",
+  //       "Templates": "none",
+  //     },
+  //     "SCRIPT":{
+  //       "INIT"    : false,
+  //       "GEN"     : false,
+  //       "STAFF"   : false,
+  //       "DOC"     : false,
+  //       "CHATBOT" : false,
+  //       "UTIL"    : false,
+  //     },
+  //   }
+  // )
+  // Logger.log(s)
+
+  // var obj = JSON.parse(s);
+  // Logger.log(obj)
+  var ss_file = DriveApp.getFileById(get_prop_value("ss-id"       ,'d'));
+  ss_file.setShareableByEditors(false).setSharing(DriveApp.Access.PRIVATE,DriveApp.Permission.NONE);
+
 }
 
 

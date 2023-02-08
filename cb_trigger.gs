@@ -11,6 +11,10 @@ function read_cmd_log(pf=3,rm=1,st=2){
   Logger.log(get_prop_value(`cmdlog_p${pf}r${rm}s${st}`,"s"))
 }
 
+function read_all_cmd_logs(){
+  Logger.log('Reading all cmd logs:\n'+read_props('cmdlog_','s',false))
+}
+
 function remove_all_cmd_logs(){
-  delete_properties("cmdlog",'s',false);
+  delete_props("cmdlog",'s',false);
 }

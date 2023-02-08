@@ -1,3 +1,5 @@
+// general utilities
+
 // utility for use in spreadsheet
 
 function make_relative(range = SpreadsheetApp.getActiveRange()){
@@ -229,7 +231,6 @@ function html_table(array,styles = undefined,header = true,){
   output_html+="</table>"
   return str_to_html(output_html);
 }
-
 
 
 

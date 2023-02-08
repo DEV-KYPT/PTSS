@@ -4,9 +4,21 @@ function refresh_calc(ss = get_ss_spreadsheet(),sheet_calc = ss.getSheetByName("
   for(var p = 1; p <= 6; p++){ss.getRange(`CALC_P${p}`).setValue(`P${p}`);}  
 }
 
-function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName("DATA"),pfs = get_ss_spreadsheet().getRange("SEED_PFS").getValue(), rms = get_ss_spreadsheet().getRange("SEED_RMS").getValue()) {
+function is_spawned(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName("DATA")){
+  var unit = ss.getRange("DATA_P1R1_FULL");
+  var unit_rows = unit.getNumRows();
+  var unit_cols = unit.getNumColumns();
+
+  return(sheet_data.getMaxColumns() >= unit_cols + 3 || sheet_data.getMaxRows() >= unit_rows+3)
+}
+
+function spawn(ss = get_ss_spreadsheet(),sheet_data = undefined, pfs = undefined, rms = undefined) {
   // retrieve relevant sizes  
   // the "unit" is the named range DATA_P1R1_*
+
+  if(sheet_data == undefined){sheet_data = ss.getSheetByName("DATA");}
+  if(pfs == undefined){pfs = ss.getRange("SEED_PFS").getValue();}
+  if(rms == undefined){rms = ss.getRange("SEED_RMS").getValue();}
   var unit_prefix = "DATA_P1R1_"
 
   var unit = ss.getRange(unit_prefix+"FULL");
@@ -15,10 +27,7 @@ function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName(
   var unit_cols  = unit.getNumColumns();
 
   // input condition check
-  if(sheet_data.getMaxColumns() >= unit_cols+3 || sheet_data.getMaxRows() >= unit_rows+3){
-    Logger.log("Illegal Populate Detected.")
-    return
-  }
+  if(is_spawned()){Logger.log("[SPAWN] Illegal Spawn Detected.");return}
 
   Logger.log(`Populating DATA with: PFs: [${pfs}] / RMs:[${rms}]`)
 
@@ -48,7 +57,7 @@ function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName(
   }
   // Logger.log(origins)
 
-  Logger.log("[GEN-POPULATE] Specs Gathered")
+  Logger.log("[SPAWN] Specs Gathered")
   // add columns
   sheet_data.insertColumnsAfter(sheet_data.getLastColumn(),unit_cols*(pfs-1));
 
@@ -95,7 +104,7 @@ function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName(
     current_row += unit_rows;
     current_rm += 1
   }
-  Logger.log("[GEN-POPULATE] Designations Set")
+  Logger.log("[SPAWN] Designations Set")
 
   // copy&paste format and content + add named ranges based on unit_nrs_specs
   for(let [prefix,origin] of Object.entries(origins)){
@@ -113,7 +122,7 @@ function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName(
       ss.setNamedRange(full_name,range);
     }
   }
-  Logger.log("[GEN-POPULATE] Contents / Named Ranges Copied")
+  Logger.log("[SPAWN] Contents / Named Ranges Copied")
 
 
   // Set Conditional Formatting
@@ -135,11 +144,11 @@ function populate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName(
 
   sheet_data.setConditionalFormatRules(cf_rules);
 
-  Logger.log("[GEN-POPULATE] Conditoinal Formatting Set")
+  Logger.log("[SPAWN] Conditoinal Formatting Set")
 
 }
 
-function unpopulate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName("DATA")){
+function unspawn(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName("DATA")){
   // var ss  = get_ss_spreadsheet();
   var unit_prefix = "DATA_P1R1_"
   var unit = ss.getRange(unit_prefix+"FULL");
@@ -149,10 +158,7 @@ function unpopulate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByNam
   var origin_row = unit.getRow();
   var origin_col = unit.getColumn();
 
-  if(sheet_data.getMaxColumns() <= unit_cols+3 || sheet_data.getMaxRows() <= unit_rows+3){
-    Logger.log("Illegal Unpopulate Detected.")
-    return
-  }
+  if(!is_spawned()){Logger.log("[UNSPAWN] Illegal Unspawn Detected.");return;}
 
   // remove conditional formatting
   sheet_data.setConditionalFormatRules([]);
@@ -166,18 +172,18 @@ function unpopulate_data(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByNam
     }
   }
 
-  Logger.log("[GEN-UNPOPULATE] NRs Removed")
+  Logger.log("[UNSPAWN] NRs Removed")
 
   // delete columns / Rows
   sheet_data.deleteColumns(origin_col+unit_cols, sheet_data.getLastColumn() - (origin_col+unit_cols)+1);
   sheet_data.deleteRows   (origin_row+unit_rows, sheet_data.getLastRow()    - (origin_row+unit_rows)+1);
-  Logger.log("[GEN-UNPOPULATE] Contents Removed")
+  Logger.log("[UNSPAWN] Contents Removed")
 
 }
 
-function repopulate_data(){
-  unpopulate_data();
-  Logger.log("[GEN-REPOPULATE] Unpopulate Complete");
-  populate_data();
-  Logger.log("[GEN-REPOPULATE] Populate Complete.")
+function respawn(){
+  unspawn();
+  Logger.log("[RESPAWN] Unspawn Complete");
+  spawn();
+  Logger.log("[RESPAWN] Respawn Complete.")
 }
