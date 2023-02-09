@@ -188,7 +188,7 @@ function gen_rm(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true,t
   var doc_id = doc.getId();
 
   var r = new Rm(pf,rm);  // the room instance
-  r.pharse(1);
+  r.parse(1);
 
   var p_title = null
   //retrieve paragraph
@@ -252,7 +252,7 @@ function gen_rm_wt(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = tru
 //   var doc_id = doc.getId();
 
 //   var r = new Rm(pf,rm);  // the room instance
-//   r.pharse(1);
+//   r.parse(1);
 
 //   var p_title = null
 //   //retrieve paragraph
@@ -284,7 +284,7 @@ function gen_rm_wt(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = tru
 
 function gen_board(doc_in = undefined,out_doc = true,out_pdf = true,name = undefined,include_confirm = true){
   var b = new Board();
-  b.pharse();
+  b.parse();
 
   var doc = null;
   if(name == undefined){name = `[${get_full_name()}] scoreboard pf${b.current_pf} ${get_now()}`;}
@@ -327,8 +327,8 @@ function gen_pf(pf = 4,out_doc = true,out_pdf = true){
 
   var b = new Board();
   var p = new Pf(pf);
-  b.pharse();
-  p.pharse(0);
+  b.parse();
+  p.parse(0);
 
   if(pf != b.current_pf){
     Logger.log("Input PF number does not equal current scoreboard!");
@@ -360,7 +360,7 @@ function gen_draw(doc_in = undefined,out_doc = true, out_pdf = true,include_conf
   var doc_id=doc.getId();
 
   var t = new Tournament();
-  t.pharse(0);
+  t.parse(0);
 
   var p_title = body.getParagraphs()[0];
   p_title.appendText("Tournament Draw");
@@ -433,7 +433,7 @@ function gen_db(doc_in = undefined,out_doc = true,out_pdf = true,include_confirm
   var doc_id=doc.getId();
 
   var c = new Core();
-  c.pharse();
+  c.parse();
 
   var p_title = doc.getParagraphs()[0];
   p_title.appendText(`Tournament Progression Information (${get_now()})`);
@@ -536,7 +536,7 @@ function gen_sel(doc_in = undefined,out_doc = true, out_pdf = true,include_confi
   var doc_id=doc.getId();
 
   var sel = new Select();
-  sel.pharse(0);
+  sel.parse(0);
 
   var p_title = body.getParagraphs()[0];
   p_title.appendText("Selection Problems Verdict");

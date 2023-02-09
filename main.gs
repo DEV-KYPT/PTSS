@@ -2,37 +2,37 @@ function main(){
   /////////////////////////////////////////////////////////////
   // var t = new Tournament();
   // Logger.log(t.toString());
-  // t.pharse(0)
+  // t.parse(0)
   // Logger.log(t.interpret(0))
 
   // var d = new Draw();
   // Logger.log(""+d);
-  // d.pharse()
+  // d.parse()
   // Logger.log(""+d)
 
   /////////////////////////////////////////////////////////////
   // var p = new Pf(3,6)
-  // p.pharse(3)
+  // p.parse(3)
   // Logger.log(p.interpret(2))
 
   /////////////////////////////////////////////////////////////
   // var r = new Rm(4,8)
-  // r.pharse(1)
+  // r.parse(1)
   // Logger.log(r.interpret(2))
   // Logger.log(string_2d(r.st[1].raw,"XXXX",0,true,6))
 
   /////////////////////////////////////////////////////////////
   // var s = new St(5,5,3)
-  // s.pharse()
+  // s.parse()
   // Logger.log(""+s)
 
   // var c = new Challenge(6,1,4);
-  // c.pharse();
+  // c.parse();
   // Logger.log(""+c)
   // Logger.log(c.select)
   /////////////////////////////////////////////////////////////
   // var b = new Board()
-  // b.pharse()
+  // b.parse()
   // Logger.log(""+b)
 
   /////////////////////////////////////////////////////////////
@@ -54,19 +54,36 @@ function main(){
 
   /////////////////////////////////////////////////////////////
   // var c = new Core();
-  // c.pharse();
+  // c.parse();
   // Logger.log(""+c);
 
   /////////////////////////////////////////////////////////////
-  var sel = new Select();
-  sel.pharse();
-  Logger.log(""+sel)
+  // var sel = new Select();
+  // sel.parse();
+  // Logger.log(""+sel)
 
   /////////////////////////////////////////////////////////////
   // var conv = new Chat(1,2,3);
   // conv.add_cmd('c')
   // Logger.log(''+conv);
 
+  // Logger.log(`[main]${get_now(true)} before getRange`);
+  // var range = get_ss_spreadsheet().getRange("DATA_P1R1_S1")
+  // Logger.log(`[main]${get_now(true)} after getRange`);
+  // var values = range.getValues();
+  // Logger.log(`[main]${get_now(true)} after getValues`);
+
+  var start = new Date();
+  var startTime = Number(start.getTime()).toFixed(0);
+  Logger.log(Number(start.getTime()).toFixed(0));
+  Utilities.sleep(1000)
+  var end = new Date();
+  Logger.log(Number(end.getTime()).toFixed(0))
+  var s = JSON.stringify(end)
+  Logger.log(s)
+  var end_s = JSON.parse(s)
+  Logger.log(typeof(end_s))
+  Logger.log(Number(end.getTime()).toFixed(0))
 
 }
 

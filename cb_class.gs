@@ -1,25 +1,25 @@
 class Quote{ 
-  //Conversation instance contains an array of Quote instances.
+  //Chat instance contains an array of Quote instances.
   //serialized: formatted as a script property:
-  //key:cmdlog_p?r?s?
+  //key:chat_p?r?s?
   //value:
-  //<userid>++<time>++<cmd>     (--> pharsed as a Quote Instance)
-  //(\n)<userid>++<time>++<cmd> (--> pharsed as a Quote Instance)
+  //<userid>++<time>++<cmd>     (--> parsed as a Quote Instance)
+  //(\n)<userid>++<time>++<cmd> (--> parsed as a Quote Instance)
 
   //Quote instances also have a "resp" property, which makes it easy to bookkeep and show outputs
   constructor(cmd_string = undefined){ // formatted: (userID)++(timestamp)++(command)
     this.user_id = null;
     this.time    = null;
     this.cmd     = null;
-    if(cmd_string != undefined){this.pharse(cmd_string);}
+    if(cmd_string != undefined){this.parse(cmd_string);}
 
     this.resp = '';
     this.resp_typ = 'default';
   }
 
-  pharse(cmd_string){
+  parse(cmd_string){
     [this.user_id,this.time,this.cmd] = cmd_string.split('++');
-    // Logger.log(`pharsed cmd:[${this.cmd}]`)
+    // Logger.log(`parsed cmd:[${this.cmd}]`)
   }
 
   toString(){
@@ -49,22 +49,47 @@ class Quote{
 }
 
 class Chat{
-  constructor(pf,rm,st){
+  constructor(pf,rm,st,verbose = false){
+    var ms = get_milisec();
+    var ms_start = ms;
+
     this.pf = pf;
     this.rm = rm;
     this.st = st;
 
-    this.c = new Challenge(pf,rm,st);
-    this.c.pharse();
+    this.cache_key = `chat_p${pf}r${rm}s${st}`;
+    var cache_obj = cache_get(this.cache_key);
+    
+    if(cache_obj != null){
+      if(verbose){Logger.log(`[Chat-INIT] [${this.cache_key}] Cache Detected! [cached at ${cache_obj.cache_time}]`);}
+      this.c = new Challenge(pf,rm,st,cache_obj.c);
+      this.c.parse();
+      this.r = new Rule(cache_obj.r)
+      this.cache_time = cache_obj.cache_time
+    }
+    else{
+      this.c = new Challenge(pf,rm,st);
+      this.c.parse();
+      this.r = new Rule();
+      this.cache_time = get_now(true);
+      cache_set(this.cache_key,this);
+      if(verbose){Logger.log(`[Chat-INIT] New cache set: [${this.cache_key}] [cached at ${this.cache_time}]`);}
+    }
+    // Logger.log(`[Chat][${get_now(true)}] Challenge parsed`);
+
+    if(verbose){Logger.log(`[Chat-INIT][+${get_milisec() - ms}] Initialize Challenge/Rule`);}
+    ms = get_milisec();
 
     this.overwrite = this.c.ignore_written_results(); // true when some data is written in challenge
-    this.r = new Rule();
 
-    this.prop_key = `cmdlog_p${pf}r${rm}s${st}`;
+    this.prop_key = `chat_p${pf}r${rm}s${st}`;
 
     this.quotes = [];
     if(this.is_empty()){this.init();}
     else               {this.load();}
+
+    if(verbose){Logger.log(`[Chat-INIT][+${get_milisec() - ms}] Handle overwrite / Load quotes`);}
+    ms = get_milisec();
 
     this.phase = "n"; //n: new (i), c: awaiting challenged problem (1~17), d: awatiing decision (a/r), f: challenge finished (w), x: written and finished(no actions possible)
 
@@ -81,8 +106,11 @@ class Chat{
     var temp_str = `${this.r.all_prbs[0]}~${this.r.all_prbs[this.r.all_prbs.length-1]}`;
     this.cmd_spec[temp_str] = ["c"    ,"challenge a problem"    ,"challenge"];
     for(var p of this.r.all_prbs){
-      this.cmd_spec[String(p)] = ["c",null,null];//????????NO 17>>>????
+      this.cmd_spec[String(p)] = ["c",null,null];
     }
+
+    if(verbose){Logger.log(`[Chat-INIT][+${get_milisec() - ms}] Setting command specs`);}
+    if(verbose){Logger.log(`[Chat-INIT] Total Elapsed: ${get_milisec() - ms_start}ms`);}
   }
 
   is_empty(){return get_prop_value(this.prop_key,"s") == null;}
@@ -132,13 +160,22 @@ class Chat{
 
   // debug output
   toString(){
-    var output = `Conversation [PF${this.pf}-RM${this.rm}-ST${this.st}] [PHASE: ${this.phase}] [${this.prop_key}]`;
+    var output = `Chat [PF${this.pf}-RM${this.rm}-ST${this.st}] [PHASE: ${this.phase}] [${this.prop_key}]`;
     output += `\n-----QUOTES-----`
     for(var q of this.quotes){output += `\n${q}`;}
     output += `\n----------------`
 
     output += `\n${this.c.interpret()}`;
     return output;
+  }
+
+  // cache output
+  toJSON(){
+    return {
+      c : this.c,
+      r : this.r,
+      cache_time : this.cache_time
+    }
   }
 
   // COMPUTATION (the functions starting with "execute" participate in response generation)
@@ -159,8 +196,9 @@ class Chat{
       "prbs"  :[[]],
       }; //2d tables for representing available questions
 
+    // this.c.highlight(); //activate current stage (SLOW)
+
     // add response to the first quote object (which must always be "init")
-    this.c.highlight();
     this.quotes[0].resp = `[ PF${this.pf} RM${this.rm} ST${this.st} ] Initialized`;
     if(this.overwrite)    {this.quotes[0].resp += html("\n[WARN] Ignoring written data. [w] command will overwrite them.",'warn');}
     this.quotes[0].resp += this.read_relaxed(this.relaxed_rules,true);
@@ -303,10 +341,14 @@ class Chat{
   }
 
   execute_all(){
+    // Logger.log(`[CB][${get_now(true)}] Excecution Started.`)
     this.execute_init();
+    // Logger.log(`[CB][${get_now(true)}] Initialized.`)
     while(this.cursor_idx < this.quotes.length){
+      // Logger.log(`[CB][${get_now(true)}] Processing Command #${this.cursor_idx}: ${this.quotes[this.cursor_idx].cmd}`)
       this.execute_next();
     }
+    // Logger.log(`[CB][${get_now(true)}] Excecution Finished.`)
   }
 
   // HTML representation

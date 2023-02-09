@@ -28,11 +28,17 @@ function get_ss_spreadsheet(){return SpreadsheetApp.getActive();}
  * [global] The time of excecution summarized as "yyyy-MM-dd-HH:mm"
  * @return {String} the time
  */
-function get_now() {
+function get_now(seconds = false) {
   //  timezone = "GMT+" + new Date().getTimezoneOffset()/60
-  timezone = SpreadsheetApp.getActive().getSpreadsheetTimeZone()
-  var date = Utilities.formatDate(new Date(), timezone, "yyyy-MM-dd-HH:mm");
+  timezone = SpreadsheetApp.getActive().getSpreadsheetTimeZone();
+  if(seconds){date = Utilities.formatDate(new Date(), timezone, "yyyy-MM-dd-HH:mm:ss.SSS");}
+  else       {date = Utilities.formatDate(new Date(), timezone, "yyyy-MM-dd-HH:mm");}
   return date;
+}
+
+function get_milisec(){
+  var t = new Date();
+  return t.getTime().toFixed(0)
 }
 
 /**

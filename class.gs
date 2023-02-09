@@ -13,11 +13,11 @@ class Tournament { //lv0 (top)
     this.pf     = [null];
   }
 
-  is_pharsed(){return(this.pf.length != 1);}
+  is_parsed(){return(this.pf.length != 1);}
 
   // lv: how many levels(down) to recurse (0: only my level)
-  pharse(lv = 0){
-    if(this.is_pharsed()){return}
+  parse(lv = 0){
+    if(this.is_parsed()){return}
 
     this.category = this.ss.getRange("META_CATEGORY").getValue();
     this.callname = this.ss.getRange("META_CALLNAME").getValue();
@@ -26,20 +26,20 @@ class Tournament { //lv0 (top)
     this.len_rm = this.ss.getRange("SEED_RMS").getValue();
 
     this.draw = new Draw();
-    this.draw.pharse();
+    this.draw.parse();
 
     for(var i = 1;i<=this.len_pf;i++){this.pf.push(new Pf(i,this.len_rm))}
 
     if(lv){
       for(var idx = 1;idx<=this.len_pf;idx++){
-        this.pf[idx].pharse(lv-1);
+        this.pf[idx].parse(lv-1);
       }
     }
   }
 
   interpret(lv = 0){
     var output = this.toString();
-    if(!this.is_pharsed()){return output};
+    if(!this.is_parsed()){return output};
     if(lv){
       output+= '\nPFs:['
       for(var idx = 1;idx<=this.len_pf;idx++){
@@ -52,7 +52,7 @@ class Tournament { //lv0 (top)
 
   toString(){
     var output = `Tournament Instance  `;
-    if(!this.is_pharsed()){return output+ '\t[UNPHARSED]';}
+    if(!this.is_parsed()){return output+ '\t[UNparseD]';}
     output+= `[${this.category}-${this.callname}]\t[PFS:${this.len_pf}] [RMS:${this.len_rm}]`
     output += `\n${this.draw.interpret(0)}`;
     return output
@@ -72,10 +72,10 @@ class Draw{
     this.draw_roster = null;
   }
 
-  is_pharsed(){return this.len_pf != null;}
+  is_parsed(){return this.len_pf != null;}
 
-  pharse(lv = 0){
-    if(this.is_pharsed()){return;}
+  parse(lv = 0){
+    if(this.is_parsed()){return;}
     this.len_pf = this.ss.getRange("SEED_PFS").getValue();
     this.len_rm = this.ss.getRange("SEED_RMS").getValue();
     this.num_teams = this.ss.getRange("DRAW_NUMTEAMS").getValue();
@@ -88,7 +88,7 @@ class Draw{
 
   toString(){
     var output = `\tDraw`
-    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+    if(!this.is_parsed()){return output + "\t[UNparseD]"}
     output += `\t[${this.num_teams} TEAMS]\n`
     output += multistring_2d([this.draw_full,this.draw_roster],["FULL DRAW","RST"],1,true)
     return output    
@@ -106,10 +106,10 @@ class Pf { //lv1
     this.rm = [null]
   }
 
-  is_pharsed(){return(this.len_rm != null);}
+  is_parsed(){return(this.len_rm != null);}
 
-  pharse(lv = 0){
-    if(this.is_pharsed()){return}
+  parse(lv = 0){
+    if(this.is_parsed()){return}
 
     this.len_rm = this.ss.getRange("SEED_RMS").getValue();
 
@@ -120,14 +120,14 @@ class Pf { //lv1
 
     if(lv){
       for(var idx = 1;idx<=this.len_rm;idx++){
-        this.rm[idx].pharse(lv-1);
+        this.rm[idx].parse(lv-1);
       }
     }
   }
 
   interpret(lv=0){
     var output = this.toString();
-    if(!this.is_pharsed()){return output};
+    if(!this.is_parsed()){return output};
     if(lv){
       output+= '\n\tRooms:['
       for(var idx = 1;idx<=this.len_rm;idx++){
@@ -140,7 +140,7 @@ class Pf { //lv1
 
   toString(){
     var output = `\tPf [${this.pf_num}]`
-    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+    if(!this.is_parsed()){return output + "\t[UNparseD]"}
     output += `\t[RMS:${this.len_rm}]`
     return output
   }
@@ -163,10 +163,10 @@ class Rm {
     this.st = [null]
   }
 
-  is_pharsed(){return(this.st.length != 1);}
+  is_parsed(){return(this.st.length != 1);}
 
-  pharse(lv = 0){
-    if(this.is_pharsed()){return}
+  parse(lv = 0){
+    if(this.is_parsed()){return}
     this.rm_loc = this.ss.getRange(`DRAW_RM${this.rm_num}`).getValue();
     this.len_st = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_LEN`).getValue();
 
@@ -186,14 +186,14 @@ class Rm {
 
     if(lv){
       for(var idx = 1;idx<=this.len_st;idx++){
-        this.st[idx].pharse(lv-1);
+        this.st[idx].parse(lv-1);
       }
     }
   }
 
   interpret(lv=0){
     var output = this.toString();
-    if(!this.is_pharsed()){return output};
+    if(!this.is_parsed()){return output};
     if(lv){
       output+= '\n\t\tStages:['
       for(var idx = 1;idx<=this.len_st;idx++){
@@ -207,7 +207,7 @@ class Rm {
 
   toString(){
     var output = `\t\tRm [${this.pf_num}-${this.rm_num}]`
-    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+    if(!this.is_parsed()){return output + "\t[UNparseD]"}
     output += `\t[STs:${this.len_st}]\t[TK:${this.tk},SK:${this.sk}]`
     // Logger.log([this.roster,this.summary["scr"],this.summary["fw"]])
     output += `\n${multistring_2d([this.roster,this.summary["scr"],this.summary["fw"]],["ROSTER","SCORE","FW"],2,false,8)}`
@@ -229,14 +229,14 @@ class St {
     this.result    = null;
   }
 
-  is_pharsed(){return(this.raw != null)}
+  is_parsed(){return(this.raw != null)}
 
-  pharse(lv = 0){
+  parse(lv = 0){
     this.raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`).getValues();
     // Logger.log(string_2d(this.raw,"RAW",0,true,6))
 
     this.challenge = new Challenge(this.pf_num,this.rm_num,this.st_num)
-    this.challenge.pharse(0,this.raw);
+    this.challenge.parse(0,this.raw);
 
     this.result = slice_2d(this.raw,[1,2],[4,21])
     for(var idx = 0;idx<this.result.length;idx++){this.result[idx].splice(16,3);}
@@ -250,14 +250,14 @@ class St {
 
   interpret(lv=0){ // bottom level, no interpretation required
     var output = this.toString();
-    if(!this.is_pharsed()){return output};
+    if(!this.is_parsed()){return output};
 
     return output
   }
 
   toString(){ // 3 tabs
     var output = `\t\t\tSt [${this.pf_num}-${this.rm_num}-${this.st_num}]`
-    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+    if(!this.is_parsed()){return output + "\t[UNparseD]"}
     // Logger.log([this.roster,this.summary["scr"],this.summary["fw"]])
 
     // output += `\n${string_2d(this.raw,"RAW",3,true,5)}`
@@ -273,12 +273,17 @@ class St {
 
 // Class within Tournament defined for pharsing challenge information (used extensively in chatbot)
 class Challenge{
-  constructor(pf_num,rm_num,st_num){
+  constructor(pf_num,rm_num,st_num,cache_obj = null,verbose = false){
+    if(verbose){Logger.log("[CHALLENGE-INIT] Started");}
+    this.start_ms = get_milisec();
+
     this.ss = get_ss_spreadsheet();
     this.pf_num = pf_num;
     this.rm_num = rm_num;
     this.st_num = st_num;
     
+    this.raw = null;
+
     this.rep_team = null;
     this.opp_team = null;
     this.rev_team = null;
@@ -314,52 +319,72 @@ class Challenge{
     // range variables (used for write.)
     this.rej_range = null;
     this.acc_range = null;
+
+    if(cache_obj != null){
+      if(verbose){Logger.log("[CHALLENGE-INIT] Cache detected!")}
+      this.raw = cache_obj.raw;
+      this.select = cache_obj.select;
+      this.penalty = cache_obj.penalty;
+    }
+
+    // separate indicator required (due to cache)
+    this.parsed = false;
   }
 
-  is_pharsed(){return this.penalty != null;}
+  is_parsed(){return this.parsed;}
 
-  pharse(lv = 0,raw = undefined){
-    if(raw == undefined){raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`).getValues();}
+  parse(lv = 0,raw = undefined,verbose = false){
+    if(this.raw == null){ // use getRange / getValues if failed to get this.raw from cache.
+      this.raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`).getValues();
+    }
+    this.rep_team = this.raw[2][2].toString();
+    this.opp_team = this.raw[3][2].toString();
+    this.rev_team = this.raw[4][2].toString();
 
-    this.rep_team = raw[2][2].toString();
-    this.opp_team = raw[3][2].toString();
-    this.rev_team = raw[4][2].toString();
+    this.constraints["B"] = this.raw[7-1][4-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.constraints["P"] = this.raw[7-1][7-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.constraints["a"] = this.raw[7-1][10-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.constraints["b"] = this.raw[7-1][13-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.constraints["c"] = this.raw[7-1][16-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.constraints["d"] = this.raw[7-1][19-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
 
-    this.constraints["B"] = raw[7-1][4-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.constraints["P"] = raw[7-1][7-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.constraints["a"] = raw[7-1][10-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.constraints["b"] = raw[7-1][13-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.constraints["c"] = raw[7-1][16-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.constraints["d"] = raw[7-1][19-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.available["B"]   = this.raw[8-1][4-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.available["P"]   = this.raw[8-1][7-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.available["a"]   = this.raw[8-1][10-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.available["b"]   = this.raw[8-1][13-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.available["c"]   = this.raw[8-1][16-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.available["d"]   = this.raw[8-1][19-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
 
-    this.available["B"]   = raw[8-1][4-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.available["P"]   = raw[8-1][7-1 ].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.available["a"]   = raw[8-1][10-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.available["b"]   = raw[8-1][13-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.available["c"]   = raw[8-1][16-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
-    this.available["d"]   = raw[8-1][19-1].toString().split(",").map(str => Number(str)).filter(num => num != 0);
+    this.rej = this.raw[1-1].slice(6-1,16-1+1).map(str => Number(str)).filter(num => num != 0);
+    this.acc = this.raw[1-1][18-1];
 
-    this.rej = raw[1-1].slice(6-1,16-1+1).map(str => Number(str)).filter(num => num != 0);
-    this.acc = raw[1-1][18-1];
+    if(this.select == null){
+      this.select = this.ss.getRange("RULE_PRB_SEL").getValues()[0][this.pf_num-1];
+    }
 
-    this.select = this.ss.getRange("RULE_PRB_SEL").getValues()[0][this.pf_num-1];
     if(this.select){
       this.rej = [];
-      this.acc = raw[6][0];
+      this.acc = this.raw[6][0];
     }
+
 
     this.complete = Number(this.acc) != 0;
 
     this.nrej    = this.constraints["a"].length + this.rej.length
-    this.weight  = raw[2][19];
-    this.penalty = this.nrej > this.ss.getRange("RULE_SCR_AR").getValue();
+    this.weight  = this.raw[2][19];
+
+    if(this.penalty ==  null){
+      this.penalty = this.nrej > this.ss.getRange("RULE_SCR_AR").getValue();
+    }
+    this.parsed = true;
+    if(verbose){Logger.log(`[CHALLENGE-PHARSE] Elapsed time: ${get_milisec() - this.start_ms}ms`)}
   }
 
   interpret(lv = 0){return this.toString();}
 
   toString(){
     var output = `\t\t\tChallenge [${this.pf_num}-${this.rm_num}-${this.st_num}]`
-    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+    if(!this.is_parsed()){return output + "\t[UNparseD]"}
 
     if(this.complete){output += ' <COMPLETE>';}
     else             {output += ' <INCOMPLETE>';}
@@ -393,6 +418,15 @@ class Challenge{
     output += `\n\t\t\t  Accepted: ${this.acc}`
 
     return output
+  }
+
+  toJSON(){
+    if(!this.is_parsed()){return null}
+    return {
+      raw : this.raw,
+      select : this.select,
+      penalty : this.penalty,
+    }
   }
 
   //additonal pure function / output methods for chatbot use
@@ -456,10 +490,10 @@ class Board{
     this.current_pf = null;
   }
   
-  is_pharsed(){return this.current_pf != null;}
+  is_parsed(){return this.current_pf != null;}
 
-  pharse(){
-    if(this.is_pharsed()){return;}
+  parse(){
+    if(this.is_parsed()){return;}
     this.current_pf = this.ss.getRange("BOARD_PF").getValue();
     this.content_num= this.ss.getRange("BOARD_CONTENT_NUM").getValues();
     this.content_rank=this.ss.getRange("BOARD_CONTENT_RANK").getValues();
@@ -469,7 +503,7 @@ class Board{
 
   toString(){
     var output = `Board`
-    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+    if(!this.is_parsed()){return output + "\t[UNparseD]"}
     // Logger.log([this.roster,this.summary["scr"],this.summary["fw"]])
     output += `\t[~ PF${this.current_pf}]`
     output += `\n${multistring_2d([this.content_num,this.content_rank],["BY NUMBER","BY RANK"],0,true,6)}`
@@ -485,10 +519,10 @@ class Core{
     this.content_teams = null;
   }
 
-  is_pharsed(){return this.content_prbs != null;}
+  is_parsed(){return this.content_prbs != null;}
 
-  pharse(lv = 0){
-    if(this.is_pharsed()){return;}
+  parse(lv = 0){
+    if(this.is_parsed()){return;}
     this.content_prbs  = this.ss.getRange("CORE_OUT_PRBS" ).getValues();
     this.content_names = this.ss.getRange("CORE_OUT_NAMES").getValues();
     this.content_teams = this.ss.getRange("CORE_OUT_TEAMS").getValues();
@@ -498,7 +532,7 @@ class Core{
   
   toString(){
     var output = `Core`
-    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+    if(!this.is_parsed()){return output + "\t[UNparseD]"}
     output += `\n${multistring_2d([this.content_teams,this.content_prbs],undefined,0,false,6)}`
     output += `\n\n${multistring_2d([this.content_teams,this.content_names],undefined,0,false,5)}`
     return output  
@@ -514,10 +548,10 @@ class Select{
     this.verdicts = {};
   }
 
-  is_pharsed(){return this.roster != null;}
+  is_parsed(){return this.roster != null;}
 
-  pharse(lv = 0){
-    if(this.is_pharsed()){return;}
+  parse(lv = 0){
+    if(this.is_parsed()){return;}
     var sel_raw   = [null].concat(this.ss.getRange("RULE_PRB_SEL" ).getValues()[0]); //used null as first element for 1-indexing
     for(var pf_num = 1;pf_num < sel_raw.length; pf_num ++){
       if(sel_raw[pf_num] == true){this.sel_pf_nums.push(pf_num);}
@@ -535,7 +569,7 @@ class Select{
   
   toString(){
     var output = `Select`
-    if(!this.is_pharsed()){return output + "\t[UNPHARSED]"}
+    if(!this.is_parsed()){return output + "\t[UNparseD]"}
 
     var a_outputs = [this.roster];
 
@@ -554,12 +588,25 @@ class Final{
 
 // Separate class for pharsing rules of challenge (used in chatbot)
 class Rule{
-  constructor(){
+  constructor(cache_obj = null,verbose = false){
+    if(verbose){Logger.log("[RULE-INIT] Started");}
+    var ms = get_milisec();
     this.ss = get_ss_spreadsheet();
-    this.mr = this.ss.getRange("RULE_PRB_MR").getValue(); //max.rejects
-    this.ma = this.ss.getRange("RULE_PRB_MA").getValue(); //minimum available (below which rule relaxes)
+
+    if(cache_obj != null){
+      if(verbose){Logger.log("[RULE-INIT] Cache detected!")}
+      this.cache_time = cache_obj.cache_time;
+      this.mr = cache_obj.mr;
+      this.ma = cache_obj.ma;
+      this.all_prbs = cache_obj.all_prbs
+    }
+    else{
+      this.cache_time = get_now(true);
+      this.mr = this.ss.getRange("RULE_PRB_MR").getValue(); //max.rejects
+      this.ma = this.ss.getRange("RULE_PRB_MA").getValue(); //minimum available (below which rule relaxes)
+      this.all_prbs = filter_empty(this.ss.getRange("META_PRB_SET").getValues()[0]);
+    }
     // this.ar = null;
-    this.all_prbs = filter_empty(this.ss.getRange("META_PRB_SET").getValues()[0]);
     this.all_rules = ["B","P",'a','b','c','d'];
     this.desc  = {
       'B':"Banned in KYPT",
@@ -570,10 +617,41 @@ class Rule{
       'd':"Presented by Opponent",
       'o':"Out of Range",
     }
+    if(verbose){Logger.log(`[RULE-INIT] Elapsed time: ${get_milisec()-ms}ms`)}
+  }
+  
+  toJSON(){
+    return {
+      cache_time : this.cache_time,
+      mr : this.mr,
+      ma : this.ss,
+      all_prbs : this.all_prbs
+    }
+  }
+
+  cache_test(){
+    Logger.log(`Recovered from Cache Successfully as Rule Instance. (Cached ${this.cache_time}),Retrieved ${get_now(true)}`)
   }
 }
 
+function cache_test_upload(){
+  var r = new Rule();
+  cache_set("test",r);
+}
 
+function cache_test_clear(){
+  CacheService.getScriptCache().put("test",null);
+}
+
+function cache_test_download(){
+  var start = get_milisec();
+  var o = cache_get("test")
+  if(o != null){Logger.log("Cache deetected!")}
+  var r_recovered = new Rule(o);
+  var end = get_milisec();
+  r_recovered.cache_test();
+  Logger.log(`Elapsed time: ${end - start}ms`)
+}
 
 
 
