@@ -58,7 +58,7 @@ function init_external (category = "TEST",callname = get_now()){ //callname is a
 }
 
 function is_new(){ //check if internal init is done in current document (true if there are no props set)
-  get_prop_value('status','d') == null;
+  return get_prop_value('status','d') == null;
 }
 
 function init_internal(){

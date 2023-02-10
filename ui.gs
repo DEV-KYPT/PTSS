@@ -133,7 +133,7 @@ function new_init(){
   // var cred = get_cred();  
   Logger.log(`This file was initialized by: ${user_get_id()}`);
   init_internal();
-  ui.alert(`Say hello to [${get_full_name}]!\nRefresh page to access scripts.\n(PTSS ${VERSION})`);
+  ui.alert(`Say hello to [${get_full_name()}]!\nRefresh page to access scripts.\n(PTSS ${VERSION})`);
 }
 
 // controlling source integrity
@@ -467,7 +467,7 @@ function ui_unhide_sheets(){
   var ui = get_ui();
   if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
 
-  var show_except = ["FINAL"];
+  var show_except = ["FINAL","EX_DATA","EX_JURY"];
   var ss = get_ss_spreadsheet();
 
   for(var sheet of ss.getSheets()){
