@@ -90,17 +90,16 @@ function onOpen(){
 
   function ui_show_doc(ui){
     ui.createMenu('DOC')
-      .addItem('Draw'            ,'ui_gen_draw'   )
-      .addItem('Scoreboard'      ,'ui_gen_board'  )
-      .addItem('Tournament Data' ,'ui_gen_db'     )
-      .addItem('Selection Stages','ui_gen_sel'    )
-      .addItem('Room Summary'    ,'ui_gen_rm'     )
-      .addItem('PF Summary'      ,'ui_gen_pf'     )
-      .addItem('Final Round'     ,'ui_gen_fin'    )
+      .addItem('Draw'              ,'ui_gen_draw'   )
+      .addItem('Scoreboard'        ,'ui_gen_board'  )
+      .addItem('Tournament Data'   ,'ui_gen_db'     )
+      .addItem('Selection Stage(s)','ui_gen_sel'    )
       .addSeparator()
-      .addItem('Write Templates'  ,'ui_gen_templates_w')
-      .addItem('Capture Templates','ui_gen_templates_c')
-      // .addItem('Finals Templates' ,'ui_gen_templates_f')
+      .addItem('Summary'           ,'ui_gen_r'      )
+      .addSeparator()
+      .addItem('Write Template'    ,'ui_gen_wt')
+      .addItem('Capture Template'  ,'ui_gen_ct')
+      // .addItem('Finals Templates'   ,'ui_gen_templates_f')
       .addToUi();
   }
 
@@ -115,9 +114,13 @@ function onOpen(){
       .addItem(`Hide Private Sheets`,'ui_hide_sheets')
       .addItem('Unhide Private Sheets','ui_unhide_sheets')
       .addSeparator()
+      .addItem('Hide [FINAL]','ui_hide_final')
+      .addItem('Unhide [FINAL]','ui_unhide_final')
+      .addSeparator()
       .addItem('Read Properties','ui_read_props')
       .addSeparator()
       .addItem('Make Formulas Relative','ui_make_relative')
+      .addItem('Speedometer',"ui_speedometer")
       .addToUi();
   }
 
@@ -212,7 +215,7 @@ function html_doc_specs(doc,pdf){
   html_output += `${doc.getName()}<br><br>`
   html_output += `<a href = "${parent_folder.getUrl()}" target = "_blank">Open Folder</a>  `;
   html_output += `<a href = "${doc.getUrl()}" target = "_blank">Open Doc</a>  `;
-  html_output += `<a href = "${pdf.getDownloadUrl()}" target = "_blank">Download PDF</a>`;
+  if(pdf != null){html_output += `<a href = "${pdf.getDownloadUrl()}" target = "_blank">Download PDF</a>`;}
   html_output += `</div>`;
   return html_output;
 }
@@ -289,7 +292,7 @@ function ui_refresh_ss(){
   return true;
 }
 
-// STAFF scripts
+// STAFF scripts (complete)
 function ui_add_staff(){
   var ui = get_ui();
   if(!check_cred("STAFF")){ui.alert("Unauthorized.");return false;}
@@ -311,18 +314,7 @@ function ui_clear_staff(){
   return true;
 }
 
-/**function dev_clear_staff(){
-  if(userGate('dev') == false){return false;}
-  var result = askUser('Clear all staff members? They will lose all access to documents.');
-  if(! result){
-    ui.alert('Canceled');
-    return false;
-  }
-  clear_staff();
-  ui.alert("All staff members cleared");
-} */
-
-// DOC scripts
+// DOC scripts (complete)
 function ui_gen_draw(){
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
@@ -360,93 +352,88 @@ function ui_gen_sel(){
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
   
-  get_ui().alert("TODO");
+  var [doc,pdf] = gen_sel();
+  var doc_html = html_doc_specs(doc,pdf);
+  ui_html_dialog(doc_html,ui,"Document(s) Generated")
+
   return true;
 }
 
-/**function user_gen_pf4_problems(){
-  if(userGate('user') == false){return false;}
-  var [doc,pdf] = gen_pf4_problems();
-  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Document Generation Successful');  
-}
- */
-
-function ui_gen_rm(){
+function ui_gen_r(){
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
 
-  var result = ui_prompt("Enter PF-Room","PF 2, Room 4 : [2-4]");
+  var result = ui_prompt("Enter [#PF-#Room]/[#PF]","Examples:\n  '2-4': PF2,Room4\n  '3'  : All rooms of PF3\n  'f'  : Final round");
   if(result == false){ui.alert("Cancelled");return;}
 
-  var [pf_num,rm_num] = result.split('-');
+  if(result == 'f'){
+    var [doc,pdf] = gen_fin_r();
+  }
+  else if(result.includes("-")){
+    var [pf_num,rm_num] = result.split('-');
+    var [doc,pdf] = gen_rm_r(pf_num,rm_num);
+  }
+  else{
+    var pf_num = result;
+    var [doc,pdf] = gen_pf_r(pf_num);
+    if(doc == false){ui.alert(`ERROR: The current scoreboard setting does not match input PF("${pf_num}") (see [BOARD] spreadsheet)`)}
+  }
 
-  var [doc,pdf] = gen_rm(pf_num,rm_num);
   var doc_html = html_doc_specs(doc,pdf);
   ui_html_dialog(doc_html,ui,"Document(s) Generated")
 
   return true;
 }
 
-function ui_gen_pf(){
+function ui_gen_wt(){ //write templates
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
 
-  var pf_num = ui_prompt("Enter PF Number","1,2,3,etc.");
-  if(pf_num == false){ui.alert("Cancelled");return;}
-  pf_num = Number(pf_num);
-  
-  var [doc,pdf] = gen_pf(pf_num);
+  var result = ui_prompt("Enter [#PF-#Room]/[#PF]","Examples:\n  '2-4': PF2,Room4\n  '3'  : All rooms of PF3\n  'f'  : Final round");
+  if(result == false){ui.alert("Cancelled");return;}
+
+  if(result == 'f'){
+    var [doc,pdf] = gen_fin_wt();
+  }
+  else if(result.includes("-")){
+    var [pf_num,rm_num] = result.split('-');
+    var [doc,pdf] = gen_rm_wt(pf_num,rm_num);
+  }
+  else{
+    var pf_num = result;
+    var [doc,pdf] = gen_pf_wt(pf_num);
+  }
+
   var doc_html = html_doc_specs(doc,pdf);
   ui_html_dialog(doc_html,ui,"Document(s) Generated")
 
   return true;
 }
 
-function ui_gen_fin(){ // finals
+function ui_gen_ct(){ //capture templates
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
-  
-  get_ui().alert("TODO");
+
+  var result = ui_prompt("Enter [#PF-#Room]/[#PF]","Examples:\n  '2-4': PF2,Room4\n  '3'  : All rooms of PF3\n  'f'  : Final round");
+  if(result == false){ui.alert("Cancelled");return;}
+
+  if(result == 'f'){
+    var [doc,pdf] = gen_fin_ct();
+  }
+  else if(result.includes("-")){
+    var [pf_num,rm_num] = result.split('-');
+    var [doc,pdf] = gen_rm_ct(pf_num,rm_num);
+  }
+  else{
+    var pf_num = result;
+    var [doc,pdf] = gen_pf_ct(pf_num);
+  }
+
+  var doc_html = html_doc_specs(doc,pdf);
+  ui_html_dialog(doc_html,ui,"Document(s) Generated")
+
   return true;
 }
-
-/** */
-
-function ui_gen_templates_w(){ //write templates
-  var ui = get_ui();
-  if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
-  
-  get_ui().alert("TODO");
-  return true;
-}
-
-/** 
-function user_gen_write_template_all(){
-  if(userGate('user') == false){return false;}
-  var total_pf = ui_prompt("Enter Total Number of PF's","1,2,3,etc.");
-  var total_rm = ui_prompt("Enter Total Number of Rooms","1,2,3 etc.");
-  var [doc,pdf] = gen_write_template_all(total_pf,total_rm,true,true);
-  ui.showModalDialog(HtmlService.createHtmlOutput(htmlString_result(doc,pdf)).setWidth(420).setHeight(100), 'Template Generation Successful');
-}*/
-
-function ui_gen_templates_c(){ //capture templates
-  var ui = get_ui();
-  if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
-  
-  get_ui().alert("TODO");
-  return true;
-}
-
-/** function user_gen_capture_templates(){
-  if(userGate('user') == false){return false;}
-  //gen_capture_templates(total_pf = 4,total_rm = 6,docs = true,pdf = false)
-  var total_pf = ui_prompt("Enter Total Number of PF's","1,2,3,etc.");
-  var total_rm = ui_prompt("Enter Total Number of Rooms","1,2,3 etc.");
-  gen_capture_templates(total_pf,total_rm,true,false);
-  ui.alert(`Capture templates successfully generated. Check [TEMPLATES] folder`);
-}
-*/
-
 
 // CHATBOT scripts (complete)
 function ui_display_chatbot(){
@@ -493,6 +480,28 @@ function ui_unhide_sheets(){
   return true;
 }
 
+function ui_hide_final(){
+  var ui = get_ui();
+  if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
+
+  var ss = get_ss_spreadsheet();
+  var sheet = ss.getSheetByName("FINAL");
+  sheet.hideSheet();
+
+  return true;
+}
+
+function ui_unhide_final(){
+  var ui = get_ui();
+  if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
+
+  var ss = get_ss_spreadsheet();
+  var sheet = ss.getSheetByName("FINAL");
+  sheet.showSheet();
+
+  return true;
+}
+
 function ui_read_props(){
   var ui = get_ui();
   if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
@@ -500,6 +509,15 @@ function ui_read_props(){
   var s_props = read_props('','sdu',true);
   ui.alert(s_props);
   return true;
+}
+
+function ui_speedometer(){
+  var ui = get_ui();
+  if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
+
+  var readout = speedometer();
+  ui.alert(readout);
+  return true
 }
 
 function ui_make_relative(){

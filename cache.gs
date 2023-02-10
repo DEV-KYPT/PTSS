@@ -1,6 +1,6 @@
 // this script only wrapps script cache for simplicity and speed.
 
-function cache_set(key,obj){CacheService.getScriptCache().put(key,JSON.stringify(obj));}
+function cache_set(key,obj){CacheService.getScriptCache().put(key,JSON.stringify(obj),get_cache_expiration());}
 
 function cache_get(key){return JSON.parse(CacheService.getScriptCache().get(key));}
 

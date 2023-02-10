@@ -20,7 +20,7 @@ function onSubmit(form_data){
   var status = chat.html_status();
   var quotes = chat.html_quotes();
   var tooltip= chat.html_tooltip();
-  Logger.log(`[CB-UI][+${get_milisec()-ms}ms]Response Generated\n\n${chat.toString()}`);
+  Logger.log(`[CB-UI][+${get_milisec()-ms}ms]Response Generated.`);
   ms = get_milisec();
 
   Logger.log(`[CB-UI] Total elapsed time: ${get_milisec() - ms_start}ms`)

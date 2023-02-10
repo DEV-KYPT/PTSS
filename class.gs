@@ -52,7 +52,7 @@ class Tournament { //lv0 (top)
 
   toString(){
     var output = `Tournament Instance  `;
-    if(!this.is_parsed()){return output+ '\t[UNparseD]';}
+    if(!this.is_parsed()){return output+ '\t[UNPARSED]';}
     output+= `[${this.category}-${this.callname}]\t[PFS:${this.len_pf}] [RMS:${this.len_rm}]`
     output += `\n${this.draw.interpret(0)}`;
     return output
@@ -88,7 +88,7 @@ class Draw{
 
   toString(){
     var output = `\tDraw`
-    if(!this.is_parsed()){return output + "\t[UNparseD]"}
+    if(!this.is_parsed()){return output + "\t[UNPARSED]"}
     output += `\t[${this.num_teams} TEAMS]\n`
     output += multistring_2d([this.draw_full,this.draw_roster],["FULL DRAW","RST"],1,true)
     return output    
@@ -140,7 +140,7 @@ class Pf { //lv1
 
   toString(){
     var output = `\tPf [${this.pf_num}]`
-    if(!this.is_parsed()){return output + "\t[UNparseD]"}
+    if(!this.is_parsed()){return output + "\t[UNPARSED]"}
     output += `\t[RMS:${this.len_rm}]`
     return output
   }
@@ -207,7 +207,7 @@ class Rm {
 
   toString(){
     var output = `\t\tRm [${this.pf_num}-${this.rm_num}]`
-    if(!this.is_parsed()){return output + "\t[UNparseD]"}
+    if(!this.is_parsed()){return output + "\t[UNPARSED]"}
     output += `\t[STs:${this.len_st}]\t[TK:${this.tk},SK:${this.sk}]`
     // Logger.log([this.roster,this.summary["scr"],this.summary["fw"]])
     output += `\n${multistring_2d([this.roster,this.summary["scr"],this.summary["fw"]],["ROSTER","SCORE","FW"],2,false,8)}`
@@ -215,6 +215,7 @@ class Rm {
   }
 
 }
+
 
 class St {
   constructor(pf_num,rm_num,st_num){
@@ -257,7 +258,7 @@ class St {
 
   toString(){ // 3 tabs
     var output = `\t\t\tSt [${this.pf_num}-${this.rm_num}-${this.st_num}]`
-    if(!this.is_parsed()){return output + "\t[UNparseD]"}
+    if(!this.is_parsed()){return output + "\t[UNPARSED]"}
     // Logger.log([this.roster,this.summary["scr"],this.summary["fw"]])
 
     // output += `\n${string_2d(this.raw,"RAW",3,true,5)}`
@@ -271,7 +272,126 @@ class St {
   
 }
 
-// Class within Tournament defined for pharsing challenge information (used extensively in chatbot)
+class Finrm{
+  constructor(){
+    this.ss = get_ss_spreadsheet();
+
+    this.len_st = null;
+    this.summary = {"scr":null,"rank":null}
+    this.tk = null;
+    this.sk = null;
+
+    this.finst = [null]
+  }
+
+  is_parsed(){return(this.finst.length != 1);}
+
+  parse(lv = 0){
+    if(this.is_parsed()){return}
+    this.len_st = this.ss.getRange(`FINAL_LEN`).getValue();
+
+    var summary_raw = this.ss.getRange(`FINAL_SUMMARY`).getValues();
+    this.roster = slice_2d(summary_raw,[0,0],[3,1]);
+
+    this.summary["scr"]   = slice_2d(summary_raw,[0,30],[3,30]);
+    this.summary["rank"]  = slice_2d(summary_raw,[0,31],[3,31]);
+
+    this.tk = this.ss.getRange(`FINAL_TK`).getValues()[0].filter(e => e != '');
+    this.sk = this.ss.getRange(`FINAL_SK`).getValues()[0].filter(e => e != '');
+
+
+    for(var i = 1;i<=this.len_st;i++){
+      this.finst.push(new Finst(i))
+    }
+
+    if(lv){
+      for(var idx = 1;idx<=this.len_st;idx++){
+        this.finst[idx].parse(lv-1);
+      }
+    }
+  }
+
+  interpret(lv=0){
+    var output = this.toString();
+    if(!this.is_parsed()){return output};
+    if(lv){
+      output+= '\nStages:['
+      for(var idx = 1;idx<=this.len_st;idx++){
+        output += `\n${this.finst[idx].interpret(lv-1)}`
+      }
+      output+= '\n]'
+    }
+
+    return output
+  }
+
+  toString(){
+    var output = `Finalroom [${get_full_name()}]`
+    if(!this.is_parsed()){return output + "\t[UNPARSED]"}
+    output += `\t[STs:${this.len_st}]\n[TK:${this.tk}]\n[SK:${this.sk}]`
+    // Logger.log([this.roster,this.summary["scr"],this.summary["rank"]])
+    output += `\n${multistring_2d([this.roster,this.summary["scr"],this.summary["rank"]],["ROSTER","SCORE","RANK"],false,8)}`
+    return output
+  }
+
+}
+
+class Finst{
+  constructor(st_num){
+    this.ss = get_ss_spreadsheet();
+    this.st_num = st_num;
+
+    this.prb = null; 
+    this.rep_team = null; 
+    this.opp_team = null; 
+    this.rev_team = null; 
+    // (replaces challenge)
+
+
+    this.raw = null;
+    this.result = null;
+  }
+
+  is_parsed(){return(this.raw != null)}
+
+  parse(lv = 0){
+    this.raw = this.ss.getRange(`FINAL_S${this.st_num}`).getValues();
+
+    this.prb = this.raw[0][28]
+
+    this.result = slice_2d(this.raw,[1,2],[4,32])
+    for(var idx = 0;idx<this.result.length;idx++){this.result[idx].splice(27,3);}
+
+    this.rep_team = this.result[1][0]; 
+    this.opp_team = this.result[2][0]; 
+    this.rev_team = this.result[3][0]; 
+
+    this.result[0][0] = `Team`;
+    this.result[0][1] = 'Name';
+    this.result[1][0] = `Rep.[${this.result[1][0]}]`;
+    this.result[2][0] = `Opp.[${this.result[2][0]}]`;
+    this.result[3][0] = `Rev.[${this.result[3][0]}]`;
+  }
+
+  interpret(lv=0){ // bottom level, no interpretation required
+    var output = this.toString();
+    if(!this.is_parsed()){return output};
+
+    return output
+  }
+
+  toString(){ // 3 tabs
+    var output = `\tFinalstage [F-${this.st_num}]`
+    if(!this.is_parsed()){return output + "\t[UNPARSED]"}
+    output += `[PROBLEM: #${this.prb}]`;
+
+    output += `\n${string_2d(this.result,"RESULT",1,true,5)}`
+
+    return output
+  }
+}
+
+// Class within Stage defined for pharsing challenge information (used extensively in chatbot)
 class Challenge{
   constructor(pf_num,rm_num,st_num,cache_obj = null,verbose = false){
     if(verbose){Logger.log("[CHALLENGE-INIT] Started");}
@@ -384,7 +504,7 @@ class Challenge{
 
   toString(){
     var output = `\t\t\tChallenge [${this.pf_num}-${this.rm_num}-${this.st_num}]`
-    if(!this.is_parsed()){return output + "\t[UNparseD]"}
+    if(!this.is_parsed()){return output + "\t[UNPARSED]"}
 
     if(this.complete){output += ' <COMPLETE>';}
     else             {output += ' <INCOMPLETE>';}
@@ -503,7 +623,7 @@ class Board{
 
   toString(){
     var output = `Board`
-    if(!this.is_parsed()){return output + "\t[UNparseD]"}
+    if(!this.is_parsed()){return output + "\t[UNPARSED]"}
     // Logger.log([this.roster,this.summary["scr"],this.summary["fw"]])
     output += `\t[~ PF${this.current_pf}]`
     output += `\n${multistring_2d([this.content_num,this.content_rank],["BY NUMBER","BY RANK"],0,true,6)}`
@@ -532,7 +652,7 @@ class Core{
   
   toString(){
     var output = `Core`
-    if(!this.is_parsed()){return output + "\t[UNparseD]"}
+    if(!this.is_parsed()){return output + "\t[UNPARSED]"}
     output += `\n${multistring_2d([this.content_teams,this.content_prbs],undefined,0,false,6)}`
     output += `\n\n${multistring_2d([this.content_teams,this.content_names],undefined,0,false,5)}`
     return output  
@@ -569,7 +689,7 @@ class Select{
   
   toString(){
     var output = `Select`
-    if(!this.is_parsed()){return output + "\t[UNparseD]"}
+    if(!this.is_parsed()){return output + "\t[UNPARSED]"}
 
     var a_outputs = [this.roster];
 
@@ -624,7 +744,7 @@ class Rule{
     return {
       cache_time : this.cache_time,
       mr : this.mr,
-      ma : this.ss,
+      ma : this.ma,
       all_prbs : this.all_prbs
     }
   }

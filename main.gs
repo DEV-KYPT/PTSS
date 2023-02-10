@@ -21,6 +21,10 @@ function main(){
   // Logger.log(r.interpret(2))
   // Logger.log(string_2d(r.st[1].raw,"XXXX",0,true,6))
 
+  var finr = new Finrm();
+  finr.parse(1)
+  Logger.log(finr.interpret(1))
+
   /////////////////////////////////////////////////////////////
   // var s = new St(5,5,3)
   // s.parse()
@@ -72,18 +76,6 @@ function main(){
   // Logger.log(`[main]${get_now(true)} after getRange`);
   // var values = range.getValues();
   // Logger.log(`[main]${get_now(true)} after getValues`);
-
-  var start = new Date();
-  var startTime = Number(start.getTime()).toFixed(0);
-  Logger.log(Number(start.getTime()).toFixed(0));
-  Utilities.sleep(1000)
-  var end = new Date();
-  Logger.log(Number(end.getTime()).toFixed(0))
-  var s = JSON.stringify(end)
-  Logger.log(s)
-  var end_s = JSON.parse(s)
-  Logger.log(typeof(end_s))
-  Logger.log(Number(end.getTime()).toFixed(0))
 
 }
 

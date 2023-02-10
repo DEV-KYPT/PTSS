@@ -63,6 +63,8 @@ function get_full_name(){
   return `${get_prop_value("category",'d')}-${get_prop_value("callname",'d')}`
 }
 
+function get_cache_expiration(){return 600;} //cache expiration time in seconds
+
 function get_visible_sheet_colors(){
   return ["#000000","#ff0000","#ff00ff","#0000ff"]
 }

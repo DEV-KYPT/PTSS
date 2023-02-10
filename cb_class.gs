@@ -50,30 +50,57 @@ class Quote{
 
 class Chat{
   constructor(pf,rm,st,verbose = false){
-    var ms = get_milisec();
-    var ms_start = ms;
-
     this.pf = pf;
     this.rm = rm;
     this.st = st;
 
     this.cache_key = `chat_p${pf}r${rm}s${st}`;
+    this.prop_key  = `chat_p${pf}r${rm}s${st}`;
+
+    // (potentailly) cached variables
+    this.c = null;
+    this.r = null;
+    this.cache_time = null;
+
+    // Logger.log(`[Chat][${get_now(true)}] Challenge parsed`);
+
+    this.overwrite = null; // true when some data is written in challenge
+
+    this.quotes = null;
+
+    this.phase = null;
+    //n: new (i), c: awaiting challenged problem (1~17), d: awatiing decision (a/r), f: challenge finished (w), x: written and finished(no actions possible)
+
+    this.cmd_spec = {// <cmd prototype>:[possible phases,description,html typ] (left at constructor since it doesn't normally change)
+      "i"     :["n"    ,"initialize chat session","default"  ],
+      "a"     :["d"    ,"accept problem"         ,"accept"   ],
+      "r"     :["d"    ,"reject problem"         ,"reject"   ],
+      "u"     :["ncdf" ,"undo last command"      ,"undo"     ],
+      "w"     :["f"    ,"write result into DATA" ,"write"    ]
+    }
+    this.parse();
+  }
+
+  parse(verbose = false){
+    var ms = get_milisec();
+    var ms_start = ms;
+
     var cache_obj = cache_get(this.cache_key);
     
     if(cache_obj != null){
-      if(verbose){Logger.log(`[Chat-INIT] [${this.cache_key}] Cache Detected! [cached at ${cache_obj.cache_time}]`);}
-      this.c = new Challenge(pf,rm,st,cache_obj.c);
+      if(true){Logger.log(`[Chat-INIT] [${this.cache_key}] Cache Detected! [cached at ${cache_obj.cache_time}]`);}
+      this.c = new Challenge(this.pf,this.rm,this.st,cache_obj.c);
       this.c.parse();
       this.r = new Rule(cache_obj.r)
       this.cache_time = cache_obj.cache_time
     }
     else{
-      this.c = new Challenge(pf,rm,st);
+      this.c = new Challenge(this.pf,this.rm,this.st);
       this.c.parse();
       this.r = new Rule();
       this.cache_time = get_now(true);
       cache_set(this.cache_key,this);
-      if(verbose){Logger.log(`[Chat-INIT] New cache set: [${this.cache_key}] [cached at ${this.cache_time}]`);}
+      if(true){Logger.log(`[Chat-INIT] New cache set: [${this.cache_key}] [cached at ${this.cache_time}]`);}
     }
     // Logger.log(`[Chat][${get_now(true)}] Challenge parsed`);
 
@@ -82,9 +109,6 @@ class Chat{
 
     this.overwrite = this.c.ignore_written_results(); // true when some data is written in challenge
 
-    this.prop_key = `chat_p${pf}r${rm}s${st}`;
-
-    this.quotes = [];
     if(this.is_empty()){this.init();}
     else               {this.load();}
 
@@ -93,18 +117,12 @@ class Chat{
 
     this.phase = "n"; //n: new (i), c: awaiting challenged problem (1~17), d: awatiing decision (a/r), f: challenge finished (w), x: written and finished(no actions possible)
 
-    this.cmd_spec = {// <cmd prototype>:[possible phases,description,html typ]
-      "i"     :["n"    ,"initialize chat session","default"  ],
-      "a"     :["d"    ,"accept problem"         ,"accept"   ],
-      "r"     :["d"    ,"reject problem"         ,"reject"   ],
-      "u"     :["ncdf" ,"undo last command"      ,"undo"     ],
-      "w"     :["f"    ,"write result into DATA" ,"write"    ]
-    }
-    // hidden command
-      // "c":["ncdf","clear all","undo"],
-
     var temp_str = `${this.r.all_prbs[0]}~${this.r.all_prbs[this.r.all_prbs.length-1]}`;
     this.cmd_spec[temp_str] = ["c"    ,"challenge a problem"    ,"challenge"];
+    this.cmd_spec["x"] = ["ncdf",null,null]
+    // hidden commands
+      // "c":["ncdf","clear all","undo"],
+      // "x":["ncdf","clear cache","err"]
     for(var p of this.r.all_prbs){
       this.cmd_spec[String(p)] = ["c",null,null];
     }
@@ -115,7 +133,7 @@ class Chat{
 
   is_empty(){return get_prop_value(this.prop_key,"s") == null;}
 
-  // backend (via propertyservice)
+  // backend (via propertyservice / cacheservice)
   init(){
     var s_init = `${user_get_id()}++${get_now()}++init`
     this.quotes = [new Quote(s_init)];
@@ -137,20 +155,28 @@ class Chat{
     for(var s of filter_empty(s_raw.split("\n"))){this.quotes.push(new Quote(s));}
   }
 
+  clear_cache(){
+    Logger.log(`[CHAT] Clearing Cache`);
+    cache_set(this.cache_key,null);
+  }
+
   // command logic
   add_cmd(cmd){ //part of onSubmit trigger
     cmd = String(cmd).replace('\n','');
+    if (cmd[0] == "x"){this.clear_cache();this.parse();}
+
     if      (cmd[0] == "u"){this.pop_last();}
     else if (cmd[0] == "c"){this.init();}
     else                   {this.quotes.push(new Quote(`${user_get_id()}++${get_now()}++${cmd}`));}
-    if      (cmd[0] != "w"){this.save();} //the write command is only executed once, and never saved
+
+    if      (!(["w","x"].includes(cmd[0]))){this.save();} //the write / clear cache command is only executed once, and never saved
   }
 
   check_cmd(cmd){ //check if a given command is valid in current phase
     if(this.phase != "c"){cmd = cmd[0];}
     if(this.cmd_spec[String(cmd)[0]] == null && this.cmd_spec[String(cmd)] == null){return false;}
-    if(this.phase == 'c'){return this.cmd_spec[String(cmd)][0].includes(this.phase)}
-    else{return this.cmd_spec[String(cmd)[0]].includes(this.phase);}
+    if(this.phase == 'c'){return this.cmd_spec[String(cmd)   ][0].includes(this.phase)}
+    else                 {return this.cmd_spec[String(cmd)[0]][0].includes(this.phase);}
     return false;
   }
 
@@ -226,7 +252,10 @@ class Chat{
 
   stabilize(){
     var new_relaxed_rules = [];
+    Logger.log(`Rule MA: ${this.r.ma}`)
+    Logger.log(`Before Stabilizing: active rules: ${this.active_rules}, available prbs: ${this.c.available[this.active_rules[0]]} (len: ${this.c.available[this.active_rules[0]].length})`)
     while(this.c.available[this.active_rules[0]].length < this.r.ma){new_relaxed_rules.push(this.relax_once());}
+    Logger.log(`After Stabilizing: active rules: ${this.active_rules}, available prbs: ${this.c.available[this.active_rules[0]]} (len: ${this.c.available[this.active_rules[0]].length})`)
     return new_relaxed_rules;
   }
 
@@ -284,6 +313,10 @@ class Chat{
     if(!this.check_cmd(cmd)){
       this.quotes[this.cursor_idx].resp="[ERROR] Invalid Command (See Tooltip)";
       this.quotes[this.cursor_idx].resp_typ='error';
+    }
+    else if(cmd=="x"){
+      this.quotes[this.cursor_idx].resp = `Cache Cleared.\nNew Cache Saved at\n${this.cache_time}`;
+      this.quotes[this.cursor_idx].resp_typ = 'cache'
     }
     else if(this.phase == "c"){
       var conflicts = this.challenge_conflicts(Number(cmd));

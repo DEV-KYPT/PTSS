@@ -1,3 +1,4 @@
+// Initialization
 function doc_resize(doc,orientation = "p",size = [595.276,841.89]) {
   //orientation: p: portrait, l: landscape
 
@@ -36,10 +37,10 @@ function doc_set_header_margin(doc,margin = 3) {
 }
 
 function doc_init(name=get_now(),orientation = "p",header = true,typ = "r"){
-  //typ(e): t:template, r:result
+  //typ(e): r:result, wt:write template, ct: capture template
   var doc = DocumentApp.create(name);
   var docId = doc.getId()
-  if(typ=="t"){DriveApp.getFileById(docId).moveTo(DriveApp.getFolderById(get_prop_value('template-id','d')));}
+  if(typ!="r"){DriveApp.getFileById(docId).moveTo(DriveApp.getFolderById(get_prop_value('template-id','d')));}
   else        {DriveApp.getFileById(docId).moveTo(DriveApp.getFolderById(get_prop_value('result-id'  ,'d')));}
   doc_resize(doc,orientation);
 
@@ -63,7 +64,7 @@ function doc_init(name=get_now(),orientation = "p",header = true,typ = "r"){
 
   if(header){ // adds full name as header / time as footer
     doc.addHeader().getParagraphs()[0].appendText(get_full_name());
-    doc.addFooter().getParagraphs()[0].setAlignment(DocumentApp.HorizontalAlignment.RIGHT).appendText(get_now());
+    if(typ == "r"){doc.addFooter().getParagraphs()[0].setAlignment(DocumentApp.HorizontalAlignment.RIGHT).appendText(get_now());}
   }
 
   doc.setMarginBottom(5);
@@ -76,21 +77,7 @@ function doc_init(name=get_now(),orientation = "p",header = true,typ = "r"){
   return doc;
 }
 
-function generate_pdf(doc){
-  var doc_file = DriveApp.getFileById(doc.getId());
-  doc.saveAndClose();
-
-  docblob = doc_file.getAs(MimeType.PDF);
-
-  folder_id = doc_file.getParents().next().getId();
-  /* Add the PDF extension */
-  docblob.setName(doc.getName() + ".pdf");
-
-  var pdf = DriveApp.createFile(docblob);
-  pdf.moveTo(DriveApp.getFolderById(folder_id));
-  return pdf;
-}
-
+// Table Handling
 function table_set_style(table,columnWidths,fontSize = 9,style = undefined,centered = false,padding = [3,1,2,2]){
   if(style == undefined){ //default style
     style = {};
@@ -116,34 +103,146 @@ function table_set_style(table,columnWidths,fontSize = 9,style = undefined,cente
   return style
 }
 
+// PDF conversion
+function generate_pdf(doc){
+  var doc_file = DriveApp.getFileById(doc.getId());
+  doc.saveAndClose();
+
+  docblob = doc_file.getAs(MimeType.PDF);
+
+  folder_id = doc_file.getParents().next().getId();
+  /* Add the PDF extension */
+  docblob.setName(doc.getName() + ".pdf");
+
+  var pdf = DriveApp.createFile(docblob);
+  pdf.moveTo(DriveApp.getFolderById(folder_id));
+  return pdf;
+}
+
+// Pre/post processing routines
+function doc_preprocess(doc_in = undefined,name = '[DOC]',orientation = 'p',header = true,typ = 'r'){
+  var doc = null;
+  if(doc_in == undefined){doc =  doc_init(name,orientation,header,typ);}
+  else                   {doc = doc_in;}
+
+  var body   = doc.getBody();
+
+  var p_1 = null
+  if(doc_in == undefined){p_1 = doc.getParagraphs()[0];}
+  else                   {body.appendPageBreak();p_1 = doc.appendParagraph('');}
+
+  return [doc,body,p_1];
+}
+
+function doc_postprocess(doc,out_pdf = true){
+  var doc_id = doc.getId();
+  var pdf = null;
+  if(out_pdf){pdf = generate_pdf(doc);}
+  else       {doc.saveAndClose();}
+  doc = DocumentApp.openById(doc_id);
+  return [doc,pdf]
+}
+
+// Stage adders
 function add_st(st,body,typ = "r"){ //add a [St] instance as a neat table to the given document body
-  var s_pre_data = `Stage ${st.st_num} \t\tAccepted Problem: ${st.challenge["acc"]} \t\tRejected Problem(s): ${st.challenge["rej"].toString()}`
+  //typ: r: result, wt: write template, ct: capture template
+  var s_pre_data = null;
+  if(typ == "r"){s_pre_data = `Stage ${st.st_num} \t\tAccepted Problem: ${st.challenge["acc"]} \t\tRejected Problem(s): ${st.challenge["rej"].toString()}`}
+  else         {s_pre_data  = `Stage ${st.st_num} \t\tAccepted Problem: ${st.challenge["acc"]} \t\tRejected Problem(s): `} // why not add it if it's there?
+
   var p_pre_data = body.appendParagraph(s_pre_data).setHeading(DocumentApp.ParagraphHeading.NORMAL);
 
-  var a = st.result; //(array of results)
-  for(var idx = 1;idx<a.length;idx++){
-    a[idx][a[0].length-1] = Math.round(a[idx][a[0].length-1]*100)/100
-  }
-  a = a.map(row => row.map(e => String(e)));
+  if(typ != "ct"){
+    var a = st.result; //(array of results)
+    for(var idx = 1;idx<a.length;idx++){
+      a[idx][a[0].length-1] = Math.round(a[idx][a[0].length-1]*100)/100
+    }
+    if(typ != "r"){a = clear_2d(a,[1,1])} // clear result portion
 
-  var table = body.appendTable(a);
-  var col_w = [80,40,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]; //av width: 595.276
-  var style_table = table_set_style(table,col_w);
+    a = a.map(row => row.map(e => String(e)));
+
+    var table = body.appendTable(a);
+    var col_w = [80,40,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]; //av width: 595.276
+    var style_table = table_set_style(table,col_w);
+  }
+  else{ // add team names and name placeholders
+    p_pre_data.setFontSize(13).editAsText().setBold(true);
+    if(st.st_num == 1){p_pre_data.merge();}
+    body.appendParagraph(' ').setFontSize(6);
+    body.appendParagraph(`Reporter Team: ${st.challenge.rep_team}\t\t Reporter Name: `).setHeading(DocumentApp.ParagraphHeading.NORMAL);
+    body.appendParagraph('IMAGE');
+    body.appendParagraph(`Opponent Team: ${st.challenge.opp_team}\t\t Opponent Name: `);
+    body.appendParagraph('IMAGE');
+    body.appendParagraph(`Reviewer Team: ${st.challenge.rev_team}\t\t Reviewer Name: `);
+    body.appendParagraph('IMAGE');
+    
+    body.appendPageBreak();
+    return null;
+  }
 
   var s_post_data = '\n'
-  if(st.challenge["penalty"]){s_post_data += `Reporting Team Reached ${st.challenge["nrej"]} Rejects. Calculated Reporter Weight is ${st.challenge["weight"]}`}
+  if(st.challenge["penalty"] && typ == "r"){s_post_data += `Reporting Team Reached ${st.challenge["nrej"]} Rejects. Calculated Reporter Weight is ${st.challenge["weight"]}`}
   var t_post_data = p_pre_data.appendText(s_post_data);
   t_post_data.setFontSize(8).setItalic(true);
   return table
 }
 
-function add_summary(rm,body,typ = "r"){ //add a summary of [Rm] instance as a neat table to the given document body
+function add_finst(finst,body,typ = "r"){
+  var s_pre_data = null;
+  if(typ == "r"){s_pre_data = `Stage ${finst.st_num} \t\tProblem: ${finst.prb}`}
+  else          {s_pre_data = `Stage ${finst.st_num} \t\tProblem: ${finst.prb}`}
+  var p_pre_data = body.appendParagraph(s_pre_data).setHeading(DocumentApp.ParagraphHeading.NORMAL);
+
+  if(typ != "ct"){
+    var a = finst.result; //(array of results)
+    for(var idx = 1;idx<a.length;idx++){
+      a[idx][a[0].length-1] = Math.round(a[idx][a[0].length-1]*100)/100
+    }
+    if(typ != "r"){a = clear_2d(a,[1,1])} // clear result portion
+
+    a = a.map(row => row.map(e => String(e)));
+
+    var cw_base = [8,4]
+    for(var i = 0;i<26;i++){cw_base.push(2);}
+    var cwf = 800/(cw_base.reduce((a, b) => a + b, 0));
+    var cw = cw_base.map(cw => cw*cwf)
+    // Logger.log(cw_base)
+    // Logger.log(cw)
+
+    var table = body.appendTable(a);
+    
+    var style_table = table_set_style(table,cw,8,undefined,false,[2,1,1,1]);
+    return table
+  }
+  else{ // add team names and name placeholders
+    p_pre_data.setFontSize(13).editAsText().setBold(true);
+    if(finst.st_num == 1){p_pre_data.merge();}
+    body.appendParagraph(' ').setFontSize(6);
+    body.appendParagraph(`Reporter Team: ${finst.rep_team}\t\t Reporter Name: `).setHeading(DocumentApp.ParagraphHeading.NORMAL);
+    body.appendParagraph('IMAGE');
+    body.appendParagraph(`Opponent Team: ${finst.opp_team}\t\t Opponent Name: `);
+    body.appendParagraph('IMAGE');
+    body.appendParagraph(`Reviewer Team: ${finst.rev_team}\t\t Reviewer Name: `);
+    body.appendParagraph('IMAGE');
+    
+    body.appendPageBreak();
+    return null;
+  }
+}
+
+function add_summary(rm,body,typ = "r",final = false){ //add a summary of [Rm] instance as a neat table to the given document body
   body.appendParagraph("Results").setHeading(DocumentApp.ParagraphHeading.NORMAL);
-  var a_result = [["Team","Score","FW"],['','',''],['','',''],['','',''],['','','']];
+  var metric = "fw";
+  if(final)(metric = "rank")
+
+  var a_result = [["Team","Score",metric.toUpperCase()],['','',''],['','',''],['','',''],['','','']];
+  
   for(var row = 1; row <= 4; row++){
     a_result[row][0] = rm.roster[row-1][1];
-    a_result[row][1] = Math.round(rm.summary["scr"][row-1][0]*1000)/1000;
-    a_result[row][2] = String(rm.summary["fw"][row-1][0]);
+    if(typ == "r"){
+      a_result[row][1] = Math.round(rm.summary["scr"][row-1][0]*1000)/1000;
+      a_result[row][2] = String(rm.summary[metric][row-1][0]);
+    }
   }
   // Logger.log(a_result)
   var t_result = body.appendTable(a_result);
@@ -153,6 +252,7 @@ function add_summary(rm,body,typ = "r"){ //add a summary of [Rm] instance as a n
   return t_result;
 }
 
+// adding confirmation section
 function add_confirm(body,entities = ["Administrator"],orientation = "p",spacing = 1){
 
   var p_confirm = body.appendParagraph("The Above Results have Been Checked and Confirmed.");
@@ -165,36 +265,19 @@ function add_confirm(body,entities = ["Administrator"],orientation = "p",spacing
     s_signature += `Name   _________________ \tSignature ____________________________`;
   }
   var p_signature = body.appendParagraph(s_signature);
-  p_signature.setHeading(DocumentApp.ParagraphHeading.NORMAL).setFontFamily("Ubuntu Mono");
-  // p_signature.setFontWeight('bold');
+  p_signature.setHeading(DocumentApp.ParagraphHeading.NORMAL).setFontFamily("Ubuntu Mono").setBold(true);
   return body;
 }
 
-function gen_rm(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true,typ = "r"){
-  // typ(e): r: result, t-c: capture template, t-w: write template
-  var doc = null;
-
-  if(doc_in == undefined){
-    if(typ=="t_c"){doc =  doc_init(`[CAPTURE TEMPLATE] pf${pf}-rm${rm}`                                ,"p",false,"t");}
-    else       {doc =  doc_init(`[${get_full_name()}] pf${pf}-rm${rm} ${get_now()}`);}
-  }
-  // TODO: do logic for capture/write templates later.
-
-  else{
-    doc = doc_in;
-    doc.getBody().appendPageBreak();
-  }
-  var body   = doc.getBody();
-  var doc_id = doc.getId();
+// Round documents
+function gen_rm_r(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true){
 
   var r = new Rm(pf,rm);  // the room instance
   r.parse(1);
 
-  var p_title = null
-  //retrieve paragraph
-  if(doc_in = undefined){p_title = doc.getParagraphs()[0];}
-  else                  {p_title = doc.appendParagraph('');}
-  p_title.appendText("PF Result")
+  var [doc,body,p_title] = doc_preprocess(doc_in,`[${get_full_name()}] pf${pf}-rm${rm} ${get_now()}`);
+
+  p_title.appendText(`[PF${pf} - Room${rm}] Result`)
   p_title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
 
   var s_info = `PF ${r.pf_num}, Room ${r.rm_num} (${r.rm_loc})\nTimekeeper: ${r.tk}, Scorekeeper: ${r.sk}`;
@@ -204,125 +287,139 @@ function gen_rm(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true,t
   var p_note = body.appendParagraph(s_note).setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setItalic(true).editAsText().setFontSize(8);
 
   var tb_tables = [];
-  for(var stage of r.st.slice(1)){tb_tables.push(add_st(stage,body,typ));}
+  for(var stage of r.st.slice(1)){tb_tables.push(add_st(stage,body,'r'));}
 
-  var tb_summary = add_summary(r,body,typ);
+  var tb_summary = add_summary(r,body,'r');
 
   add_confirm(body,['Evaluating Timekeeper','Administrative Juror'],'p',2);
 
-  var pdf = null;
-  if(out_pdf){
-    pdf = generate_pdf(doc);
-    doc = DocumentApp.openById(doc_id);
-  }
-  return [doc,pdf]
+  return doc_postprocess(doc,out_pdf);
 }
 
-function gen_rm_wt(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true){
-  var doc = null;
+function gen_rm_wt(pf = 5,rm = 7,doc_in = undefined,out_doc = true,out_pdf = true){
+  var r = new Rm(pf,rm);  // the room instance
+  r.parse(1);
 
-  if(doc_in == undefined){doc =  doc_init(`[WRITE TEMPLATE] pf${pf}-rm${rm} ${get_now()}`);}
+  var [doc,body,p_title] = doc_preprocess(doc_in,`[WRITE TEMPLATE] pf${pf}-rm${rm}`,'p',true,'wt');
 
-  else{
-    doc = doc_in;
-    doc.getBody().appendPageBreak();
-  }
-  var body   = doc.getBody();
-  var doc_id = doc.getId();
+  p_title.appendText(`Scoring Template (PF${pf}-RM${rm})`);
+  p_title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
 
-  
+  var s_info = `PF ${r.pf_num}, Room ${r.rm_num} (${r.rm_loc})\nTimekeeper: ______, Scorekeeper: ______`;
+  var p_info =  body.appendParagraph(s_info).setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+
+  var tb_tables = [];
+  for(var stage of r.st.slice(1)){tb_tables.push(add_st(stage,body,'wt'));}
+
+  var tb_summary = add_summary(r,body,'wt');
+
+  add_confirm(body,['Chair Juror'],'p',2);
+
+  return doc_postprocess(doc,out_pdf)
+}
+
+function gen_rm_ct(pf = 5, rm = 7,doc_in = undefined,out_doc = true,out_pdf = false){
+
+  var r = new Rm(pf,rm);  // the room instance
+  r.parse(1);
+
+  var [doc,body,p_title] = doc_preprocess(doc_in,`[CAPTURE TEMPLATE] pf${pf}-rm${rm}`,'p',true,'ct');
+
+  var p_title_header = doc.getHeader().appendParagraph('').setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+  var t_title = p_title_header.appendText("Scoring Template")
+  var t_info = p_title_header.appendText(` - PF ${r.pf_num}, Room ${r.rm_num} (${r.rm_loc})`)
+  var t_staff = p_title_header.appendText(`\nTimekeeper: ??? / Scorekeeper: ???`);
+  t_title.setFontSize(12).setBold(true);
+  t_staff.setFontSize(9);
+
+  for(var stage of r.st.slice(1)){add_st(stage,body,'ct');}
+
+  // add_confirm(body,['Chair Juror'],'p',2);
+  var p_confirm_footer = doc.addFooter().getParagraphs()[0]
+  p_confirm_footer.setAlignment(DocumentApp.HorizontalAlignment.LEFT)
+  p_confirm_footer.appendText('Confirmation of Chair Juror  \t Name __________ Signature ___________________');
+  p_confirm_footer.editAsText().setFontFamily("Ubuntu Mono").setFontSize(12).setBold(true)
+
+  return doc_postprocess(doc,out_pdf)  
+}
+
+// Finals documents
+function gen_fin_r(doc_in = undefined,out_doc = true,out_pdf = true){
+  var finr = new Finrm();
+  finr.parse(1);
+
+  var [doc,body,p_title] = doc_preprocess(doc_in,`[${get_full_name()}] final ${get_now()}`,'l');
+
+  p_title.appendText(`${get_full_name()} Final Round Result`)
+  p_title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+  var s_info = `Timekeepers: ${finr.tk}\nScorekeepers: ${finr.sk}`;
+  var p_info =  body.appendParagraph(s_info).setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+
+  var s_note = 'Note: Numbers here are rounded, while the scoring system calculates un-rounded numbers.';
+  var p_note = body.appendParagraph(s_note).setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setItalic(true).editAsText().setFontSize(8);
+
+  var tb_tables = [];
+  for(var stage of finr.finst.slice(1)){tb_tables.push(add_finst(stage,body,'r'));}
+
+  var tb_summary = add_summary(finr,body,'r',true);
+
+  add_confirm(body,['Evaluating Timekeeper','Administrative Juror','Administrator'],'p',2);
+    return doc_postprocess(doc,out_pdf);
 
 }
 
-// function gen_rm(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true,typ = "r"){
-//   // typ(e): r: result, t-c: capture template, t-w: write template
-//   var doc = null;
+function gen_fin_wt(doc_in = undefined,out_doc = true,out_pdf = true){
 
-//   if(doc_in == undefined){
-//     if(typ=="t_c"){doc =  doc_init(`[CAPTURE TEMPLATE] pf${pf}-rm${rm}`                                ,"p",false,"t");}
-//     else       {doc =  doc_init(`[${get_full_name()}] pf${pf}-rm${rm} ${get_now()}`);}
-//   }
-//   // TODO: do logic for capture/write templates later.
+  var finr = new Finrm();  // the room instance
+  finr.parse(1);
 
-//   else{
-//     doc = doc_in;
-//     doc.getBody().appendPageBreak();
-//   }
-//   var body   = doc.getBody();
-//   var doc_id = doc.getId();
+  var [doc,body,p_title] = doc_preprocess(doc_in,`[WRITE TEMPLATE] final`,'l',true,'wt');
 
-//   var r = new Rm(pf,rm);  // the room instance
-//   r.parse(1);
+  p_title.appendText("Scoring Template")
+  p_title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
 
-//   var p_title = null
-//   //retrieve paragraph
-//   if(doc_in = undefined){p_title = doc.getParagraphs()[0];}
-//   else                  {p_title = doc.appendParagraph('');}
-//   p_title.appendText("PF Result")
-//   p_title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  var s_info = `Timekeepers: ______, ______, ______, ______, ______\nScorekeepers: ______, ______, ______, ______, ______`;
+  var p_info =  body.appendParagraph(s_info).setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
 
-//   var s_info = `PF ${r.pf_num}, Room ${r.rm_num} (${r.rm_loc})\nTimekeeper: ${r.tk}, Scorekeeper: ${r.sk}`;
-//   var p_info =  body.appendParagraph(s_info).setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+  var tb_tables = [];
+  for(var stage of finr.finst.slice(1)){tb_tables.push(add_finst(stage,body,'wt'));}
 
-//   var s_note = 'Note: Numbers here are rounded, while the scoring system calculates un-rounded numbers.';
-//   var p_note = body.appendParagraph(s_note).setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setItalic(true).editAsText().setFontSize(8);
+  var tb_summary = add_summary(finr,body,'wt',true);
 
-//   var tb_tables = [];
-//   for(var stage of r.st.slice(1)){tb_tables.push(add_st(stage,body,typ));}
+  add_confirm(body,['Chair Juror'],'p',2);
 
-//   var tb_summary = add_summary(r,body,typ);
-
-//   add_confirm(body,['Evaluating Timekeeper','Administrative Juror'],'p',2);
-
-//   var pdf = null;
-//   if(out_pdf){
-//     pdf = generate_pdf(doc);
-//     doc = DocumentApp.openById(doc_id);
-//   }
-//   return [doc,pdf]
-// }
-
-function gen_board(doc_in = undefined,out_doc = true,out_pdf = true,name = undefined,include_confirm = true){
-  var b = new Board();
-  b.parse();
-
-  var doc = null;
-  if(name == undefined){name = `[${get_full_name()}] scoreboard pf${b.current_pf} ${get_now()}`;}
-
-  if(doc_in == undefined){doc =  doc_init(name);}
-  else{
-    doc = doc_in;
-    doc.appendPageBreak();
-  }
-  var body = doc.getBody();
-  var doc_id=doc.getId();
-
-
-  var p_title = body.getParagraphs()[0];
-  p_title.appendText(`Scoreboard (up to PF${b.current_pf})`)
-  p_title.setHeading(DocumentApp.ParagraphHeading.TITLE).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-
-  var p_note =  body.appendParagraph('Note: Numbers here are rounded, while the scoring system calculates un-rounded numbers');
-  p_note.setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setItalic(true);
-  p_note.editAsText().setFontSize(8);
-  p_note.appendText('.').setItalic(false);
-  // body.appendParagraph('').setItalic(false);
-
-  var tb = doc.appendTable(b.content_rank.map(row => row.map(e => String(e))));
-  var style = table_set_style(tb,[140,40,40,40,40,40,40,70,70,40],12);
-
-  if(include_confirm){add_confirm(body,['Evaluator','Administrator'],'p',1);}
-
-  var pdf = null;
-  if(out_pdf){
-    pdf = generate_pdf(doc);
-    doc = DocumentApp.openById(doc_id);
-  }
-  return [doc,pdf]
+  return doc_postprocess(doc,out_pdf)
 }
 
-function gen_pf(pf = 4,out_doc = true,out_pdf = true){
-  var doc = gen_board(undefined,true,false,`[${get_full_name()}] pf${pf} ${get_now()}`,true)[0];
+function gen_fin_ct(doc_in = undefined,out_doc = true,out_pdf = false){
+  var finr = new Finrm();  // the room instance
+  finr.parse(1);
+
+  var [doc,body,p_title] = doc_preprocess(doc_in,`[CAPTURE TEMPLATE] final`,'l',true,'ct');
+
+  var p_title_header = doc.getHeader().appendParagraph('').setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+  var t_title = p_title_header.appendText("Scoring Template")
+  var t_info = p_title_header.appendText(` - Final Round`)
+  var t_staff = p_title_header.appendText(`\nTimekeepers: ??? / Scorekeepers: ???`);
+  t_title.setFontSize(12).setBold(true);
+  t_staff.setFontSize(9);
+
+  for(var stage of finr.finst.slice(1)){add_finst(stage,body,'ct');}
+
+  // add_confirm(body,['Chair Juror'],'p',2);
+  var p_confirm_footer = doc.addFooter().getParagraphs()[0]
+  p_confirm_footer.setAlignment(DocumentApp.HorizontalAlignment.LEFT)
+  p_confirm_footer.appendText('Confirmation of Chair Juror  \t Name __________ Signature ___________________');
+  p_confirm_footer.editAsText().setFontFamily("Ubuntu Mono").setFontSize(12).setBold(true)
+
+  return doc_postprocess(doc,out_pdf)  
+}
+
+// PF-level document generations
+function gen_pf_r(pf = 3,out_doc = true,out_pdf = true){
+  var doc = gen_board(undefined,true,false,true)[0];
+  doc.setName(`[${get_full_name()}] pf${pf} ${get_now()}`);
   var doc_id = doc.getId();
 
   var b = new Board();
@@ -332,37 +429,54 @@ function gen_pf(pf = 4,out_doc = true,out_pdf = true){
 
   if(pf != b.current_pf){
     Logger.log("Input PF number does not equal current scoreboard!");
-    return
+    return [false,null]
   }
 
-  for(var rm_num = 1;rm_num <= p.len_rm;rm_num++){
-    doc = gen_rm(pf,rm_num,doc,true,false,'r')[0];
+  for(var rm = 1;rm <= p.len_rm;rm++){
+    doc = gen_rm_r(pf,rm,doc,true,false,'r')[0];
+    Logger.log(`[GEN-PF] Generation for PF${pf} RM${rm} Complete`)
   }
 
-  var pdf = null;
-  if(out_pdf){
-    pdf = generate_pdf(doc);
-    doc = DocumentApp.openById(doc_id);
-  }
-  return [doc,pdf]
+  return doc_postprocess(doc,out_pdf)
+
 }
 
-function gen_draw(doc_in = undefined,out_doc = true, out_pdf = true,include_confirm = true){
-  var doc = null;
-  var name = `[${get_full_name()}] draw ${get_now()}`;
+function gen_pf_wt(pf = 6,out_pdf = true){ //generate write templates for given PF (all wt takes too long.)
+  var t = new Tournament();
+  t.parse(0);
+  Logger.log(`[GEN-WT] Generating Write Template for PF${pf}`);
 
-  if(doc_in == undefined){doc =  doc_init(name);}
-  else{
-    doc = doc_in;
-    doc.appendPageBreak();
+  var doc = gen_rm_wt(pf,1,undefined,true,false)[0];
+  Logger.log(`[GEN-WT] PF${pf} RM1 Complete.`);
+
+  doc.setName(`[WRITE TEMPLATE] pf${pf}`)
+  for(var rm = 2;rm<=t.len_rm;rm++){
+    doc = gen_rm_wt(pf,rm,doc,true,false)[0];
+    Logger.log(`[GEN-WT] PF${pf} RM${rm} Complete.`);
   }
-  var body = doc.getBody();
-  var doc_id=doc.getId();
+
+  return doc_postprocess(doc,out_pdf)
+}
+
+function gen_pf_ct(pf = 6,out_pf = false){
+  var t = new Tournament();
+  t.parse(0);
+  Logger.log(`[GEN-CT] Generating Capture Template for PF${pf}`);
+
+  for(var rm = 1;rm<=t.len_rm;rm++){
+    gen_rm_ct(pf,rm,undefined,true,false);
+    Logger.log(`[GEN-CT] PF${pf} RM${rm} Complete.`);
+  }
+}
+
+// Tournament-general documents
+function gen_draw(doc_in = undefined,out_doc = true, out_pdf = true,include_confirm = true){
 
   var t = new Tournament();
   t.parse(0);
 
-  var p_title = body.getParagraphs()[0];
+  var [doc,body,p_title] = doc_preprocess(doc_in,`[${get_full_name()}] draw ${get_now()}`,'p');
+
   p_title.appendText("Tournament Draw");
   p_title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
 
@@ -412,30 +526,38 @@ function gen_draw(doc_in = undefined,out_doc = true, out_pdf = true,include_conf
 
   if(include_confirm){add_confirm(body,['Administrator'],'p',2);}
 
-  var pdf = null;
-  if(out_pdf){
-    pdf = generate_pdf(doc);
-    doc = DocumentApp.openById(doc_id);
-  }
-  return [doc,pdf]
+  return doc_postprocess(doc,out_pdf)
+}
+
+function gen_board(doc_in = undefined,out_doc = true,out_pdf = true,include_confirm = true){
+  var b = new Board();
+  b.parse();
+
+  var [doc,body,p_title] = doc_preprocess(doc_in,`[${get_full_name()}] scoreboard pf${b.current_pf} ${get_now()}`);
+
+  p_title.appendText(`Scoreboard (up to PF${b.current_pf})`)
+  p_title.setHeading(DocumentApp.ParagraphHeading.TITLE).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+  var p_note =  body.appendParagraph('Note: Numbers here are rounded, while the scoring system calculates un-rounded numbers');
+  p_note.setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setItalic(true);
+  p_note.editAsText().setFontSize(8);
+  p_note.appendText('.').setItalic(false);
+  // body.appendParagraph('').setItalic(false);
+
+  var tb = doc.appendTable(b.content_rank.map(row => row.map(e => String(e))));
+  var style = table_set_style(tb,[140,40,40,40,40,40,40,70,70,40],12);
+
+  if(include_confirm){add_confirm(body,['Evaluator','Administrator'],'p',2);}
+
+  return doc_postprocess(doc,out_pdf)
+
 }
 
 function gen_db(doc_in = undefined,out_doc = true,out_pdf = true,include_confirm = false){
-  var doc = null;
-  var name = `[${get_full_name()}] database ${get_now()}`;
-
-  if(doc_in == undefined){doc =  doc_init(name,'l');}
-  else{
-    doc = doc_in;
-    doc.appendPageBreak();
-  }
-  var body = doc.getBody();
-  var doc_id=doc.getId();
-
   var c = new Core();
   c.parse();
 
-  var p_title = doc.getParagraphs()[0];
+  var [doc,body,p_title] = doc_preprocess(doc_in,`[${get_full_name()}] database ${get_now()}`,'l');
   p_title.appendText(`Tournament Progression Information (${get_now()})`);
   p_title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
 
@@ -514,31 +636,14 @@ function gen_db(doc_in = undefined,out_doc = true,out_pdf = true,include_confirm
 
   if(include_confirm){add_confirm(body,["Evaluator","Administrator"],"l",2);}
 
-  var pdf = null;
-  if(out_pdf){
-    pdf = generate_pdf(doc);
-    doc = DocumentApp.openById(doc_id);
-  }
-  return [doc,pdf]
-
+  return doc_postprocess(doc,out_pdf)
 }
 
 function gen_sel(doc_in = undefined,out_doc = true, out_pdf = true,include_confirm = false){
-  var doc = null;
-  var name = `[${get_full_name()}] selection verdict ${get_now()}`;
-
-  if(doc_in == undefined){doc =  doc_init(name);}
-  else{
-    doc = doc_in;
-    doc.appendPageBreak();
-  }
-  var body = doc.getBody();
-  var doc_id=doc.getId();
-
   var sel = new Select();
   sel.parse(0);
 
-  var p_title = body.getParagraphs()[0];
+  var [doc,body,p_title] = doc_preprocess(doc_in,`[${get_full_name()}] selection verdict ${get_now()}`);
   p_title.appendText("Selection Problems Verdict");
   p_title.setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
 
@@ -561,17 +666,5 @@ function gen_sel(doc_in = undefined,out_doc = true, out_pdf = true,include_confi
 
   if(include_confirm){add_confirm(body,['Administrator'],'p',2);}
 
-  var pdf = null;
-  if(out_pdf){
-    pdf = generate_pdf(doc);
-    doc = DocumentApp.openById(doc_id);
-  }
-  return [doc,pdf]
+  return doc_postprocess(doc,out_pdf);
 }
-
-// TODO
-// typ options for gen_rm
-// function populate_capture_templates(){}
-// function populate_write_templates(){}
-
-

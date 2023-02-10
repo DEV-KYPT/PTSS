@@ -7,7 +7,7 @@
       font-size: 2.1vh !important;
       /* font-size: 2.3vh; */
       /* color: #000 !important; */
-      font-family: Courier New !important;
+      font-family: Lucida Console !important;
     }
     table, th, td{
       font-size: 1.5vh !important;
@@ -50,9 +50,14 @@
           <input type="text" size="1" maxlength="1" name="st" id="st" required="required">
         </span>
 
-        <div id="status"      name="status"     ></div>
+        <div id="status"      name="status"     >
+          <br><br><br><br><br><br><br><br><br><br><br><br>
+          <br><br><br><br><br><br><br><br><br><br><br>
+        </div>
 
-        <div id="cmd_history" name="cmd_history"></div>
+        <div id="cmd_history" name="cmd_history">
+          <br><br><br><br><br><br><br><br><br><br><br>
+        </div>
 
         <span class="block form-group">
           <span> <label for="cmd" id="cmd_descriptor">...</label> <span>
@@ -62,7 +67,7 @@
         <span class="block">
           <button type="submit" class="action" id="submit">[>]</button>
         </span>
-        <div id="condition" name="condition" style="font-size:10px;text-align:right;">---</div>
+        <div id="condition" name="condition" style="font-size:10px;text-align:right;">[-----------]</div>
         <hr>
         <div id="tooltip" name="tooltip" style="font-size:13px;">Select PF/RM/ST</div>
       </form>
@@ -82,19 +87,23 @@
       // document.getElementById('button').value = 'submit';
       document.getElementById("cmd_history").scrollTop = document.getElementById("cmd_history").scrollHeight;
       // window.scrollTo(0,document.body.scrollHeight);
-      document.getElementById('condition').innerHTML = '<span style="color:green;">standby</span>';
+      document.getElementById('condition').innerHTML = '<span style="color:green;">[----standby]</span>';
       document.getElementById('submit').innerHTML = '[>]';
+      document.getElementById('submit').disabled = false;
     }
 
     function fail(err){
-      document.getElementById('condition').innerHTML = '<span style="color:red;">failed</span>';
+      document.getElementById('condition').innerHTML = '<span style="color:red;">[-----failed]</span>';
       document.getElementById('submit').innerHTML = '[>]';
+      document.getElementById('submit').disabled = false;
+      // google.script.run.get_ui().alert(err);
     }
 
     document.querySelector("#chatbot").addEventListener("submit", 
       function(event){
         event.preventDefault();
-        document.getElementById('condition').innerHTML = '<span style="color:blue;">processing</span>';
+        document.getElementById('submit').disabled = true;
+        document.getElementById('condition').innerHTML = '<span style="color:blue;">[-processing]</span>';
         document.getElementById('submit').innerHTML = '...';
 
         google.script.run.withSuccessHandler(write).withFailureHandler(fail).onSubmit(this);

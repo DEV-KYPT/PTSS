@@ -9,7 +9,7 @@ function make_relative(range = SpreadsheetApp.getActiveRange()){
     for(var idx_col = 1;idx_col <= range.getNumColumns();idx_col++){
       if(f_start[idx_row-1][idx_col-1] == ""){continue;}
       if(f_start[idx_row-1][idx_col-1].includes("$")){
-        range.getCell(idx_row,idx_col).setFormula(f_start[idx_row-1][idx_col-1].replace("$",""));
+        range.getCell(idx_row,idx_col).setFormula(f_start[idx_row-1][idx_col-1].replaceAll("$",""));
         count += 1;
       }
     }
@@ -18,13 +18,31 @@ function make_relative(range = SpreadsheetApp.getActiveRange()){
   return count
 }
 
+function speedometer(){
+  var ss = get_ss_spreadsheet();
+  var time_sheet = [];
+  var readout = "Speedometer Readings"
+  var ms = get_milisec();
+  
+  var a = ss.getRange("DATA_P1R1_S3");
+  
+  readout += `\n[SPEED] getRange : ${get_milisec()-ms}ms`
+  ms = get_milisec();
+
+  var v = a.getValues();
+  readout += `\n[SPEED] getValues : ${get_milisec()-ms}ms`
+
+  Logger.log(readout);
+  return readout
+}
+
 // 2d array handling
 
-function slice_2d(array=[[]],idx_s = [0,0],idx_e = [array.length,array[0].length]){
+function slice_2d(array=[[]],idx_s = [0,0],idx_e = [array.length-1,array[0].length-1]){
   return array.slice(idx_s[0],idx_e[0]+1).map(row => row.slice(idx_s[1],idx_e[1]+1))
 }
 
-function clear_2d(array=[[]],idx_s = [0,0],idx_e = [array.length,array[0].length]){
+function clear_2d(array=[[]],idx_s = [0,0],idx_e = [array.length-1,array[0].length-1]){
   for(var idx_row = idx_s[0];idx_row <= idx_e[0];idx_row++){
     for(var idx_col = idx_s[1];idx_col <= idx_e[1];idx_col++){
       array[idx_row][idx_col] = "";
@@ -198,7 +216,8 @@ function get_cb_style(typ){
   "conflict" : ["maroon"       ,'normal' ], //conflicting rules
   "undo"     : ["brown"        ,'normal' ],  //undo(tooltip)
   "status"   : ["purple"       ,'bold'   ],
-  "write"    : ["darkslateblue",'normal' ]
+  "write"    : ["darkslateblue",'normal' ],
+  "cache"    : ["gray"         ,'normal' ]
   }
   return cb_styles[typ];
 }
