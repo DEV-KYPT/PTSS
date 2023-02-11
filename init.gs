@@ -75,8 +75,8 @@ function init_internal(){
     if(entry[0]=="d"){props_d[entry[1]]=entry[2]}
     if(entry[0]=="u"){props_u[entry[1]]=entry[2]}
   }
-  props_d["category"]=ss.getRange("META_CATEGORY").getValue();
-  props_d["callname"]=ss.getRange("META_CALLNAME").getValue();
+  props_d["category"]=String(ss.getRange("META_CATEGORY").getValue());
+  props_d["callname"]=String(ss.getRange("META_CALLNAME").getValue());
 
   // Logger.log(props_s)
   // Logger.log(props_d)

@@ -163,7 +163,7 @@ function add_st(st,body,typ = "r"){ //add a [St] instance as a neat table to the
 
     var table = body.appendTable(a);
     var col_w = [80,40,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]; //av width: 595.276
-    var style_table = table_set_style(table,col_w);
+    var style_table = table_set_style(table,col_w,9,undefined,true,[2,1,1,1]);
   }
   else{ // add team names and name placeholders
     p_pre_data.setFontSize(13).editAsText().setBold(true);
@@ -211,7 +211,7 @@ function add_finst(finst,body,typ = "r"){
 
     var table = body.appendTable(a);
     
-    var style_table = table_set_style(table,cw,8,undefined,false,[2,1,1,1]);
+    var style_table = table_set_style(table,cw,8,undefined,false,[0,0,0,0]);
     return table
   }
   else{ // add team names and name placeholders

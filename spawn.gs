@@ -127,7 +127,7 @@ function spawn(ss = get_ss_spreadsheet(),sheet_data = undefined, pfs = undefined
 
   // Set Conditional Formatting
   var cf_rules = sheet_data.getConditionalFormatRules();
-  var cf_nrs = get_nr("_S4");
+  var cf_nrs = get_nr("_S4","DATA");
   var cf_ranges = []
   for(var nr of cf_nrs){
     cf_ranges.push(nr.getRange());

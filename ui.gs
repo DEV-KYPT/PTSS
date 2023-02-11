@@ -298,6 +298,7 @@ function ui_add_staff(){
   if(!check_cred("STAFF")){ui.alert("Unauthorized.");return false;}
 
   if(!ui_ask("This script will give access to all affilated staff. Continue?")){ui.alert("Cancelled");return false;}
+  // ui_hide_sheets(); // should we automatically hide sheets when inviting staff members?
   repopulate_creds();
   sync_access();
   get_ui().alert("Staff members added.");
@@ -426,7 +427,9 @@ function ui_gen_ct(){ //capture templates
   }
   else{
     var pf_num = result;
-    var [doc,pdf] = gen_pf_ct(pf_num);
+    gen_pf_ct(pf_num);
+    ui.alert("Capture Templates Created. See [TEAMPLATES] Folder.");
+    return;
   }
 
   var doc_html = html_doc_specs(doc,pdf);

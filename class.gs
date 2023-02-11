@@ -362,9 +362,9 @@ class Finst{
     this.result = slice_2d(this.raw,[1,2],[4,32])
     for(var idx = 0;idx<this.result.length;idx++){this.result[idx].splice(27,3);}
 
-    this.rep_team = this.result[1][0]; 
-    this.opp_team = this.result[2][0]; 
-    this.rev_team = this.result[3][0]; 
+    this.rep_team = this.result[1][0].slice(0,7); 
+    this.opp_team = this.result[2][0].slice(0,7); 
+    this.rev_team = this.result[3][0].slice(0,7); //long names can cause unwanted linebreaks
 
     this.result[0][0] = `Team`;
     this.result[0][1] = 'Name';
