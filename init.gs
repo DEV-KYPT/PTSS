@@ -31,8 +31,8 @@ function init_external (category = "TEST",callname = get_now()){ //callname is a
   // populate metadata for new sheet.
   var ext_props = [
     ['d','status'      ,`[${category}-${callname}] init from <${get_prop_value("status")}> at [${get_now()}]`],
-    ['d','category'    ,category],
-    ['d','callname'    ,callname],
+    ['d','category'    ,category], //!! this has to be the second line!
+    ['d','callname'    ,callname], //!! this has to be the third line!
     ['d','ss-id'       ,new_ss_file.getId()],
     ['d','ss-url'      ,new_ss_file.getUrl()],
     ['d','root-id'     ,new_root.getId()],
@@ -66,8 +66,18 @@ function is_new(){ //check if internal init is done in current document (true if
 
 function init_internal(){
   Logger.log("Internal Initialization Called at: "+get_now());
+  const ss_name = `[${get_full_name()}] PTSS ${VERSION}`;
 
+  var root_name = null;
+  if(get_prop_value('status','d') == 'SOURCE'){root_name = `[${get_full_name()}] ${VERSION}`}
+  else                                        {root_name = `[${get_full_name()}] Scoring System ${VERSION}`}
+  
   var ss = get_ss_spreadsheet();
+  ss.rename(ss_name);
+
+  var root_folder = DriveApp.getFileById(get_prop_value('root-id','d'))
+  root_folder.setName(root_name);
+
   var prop_raw = ss.getRange("META_PROP").getValues();
   // Logger.log(prop_raw)
   var props_s = {}
@@ -78,8 +88,8 @@ function init_internal(){
     if(entry[0]=="d"){props_d[entry[1]]=entry[2]}
     if(entry[0]=="u"){props_u[entry[1]]=entry[2]}
   }
-  props_d["category"]=String(ss.getRange("META_CATEGORY").getValue());
-  props_d["callname"]=String(ss.getRange("META_CALLNAME").getValue());
+  // props_d["category"]=String(ss.getRange("META_CATEGORY").getValue());
+  // props_d["callname"]=String(ss.getRange("META_CALLNAME").getValue());
 
   // Logger.log(props_s)
   // Logger.log(props_d)
@@ -90,7 +100,7 @@ function init_internal(){
 
   // also propagate version information backwards (useful redundancy for working with SOURCE).
   ss.getRange("META_VERSION").setValue(VERSION);
-  ss.rename(`[${ss.getRange("META_CATEGORY").getValue()}-${ss.getRange("META_CALLNAME").getValue()}] PTSS ${VERSION}`)
+  ss.rename(`[${get_full_name()}] PTSS ${VERSION}`)
 
   populate_creds(true); //populate credentials for developers
 
