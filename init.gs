@@ -31,6 +31,8 @@ function init_external (category = "TEST",callname = get_now()){ //callname is a
   // populate metadata for new sheet.
   var ext_props = [
     ['d','status'      ,`[${category}-${callname}] init from <${get_prop_value("status")}> at [${get_now()}]`],
+    ['d','category'    ,category],
+    ['d','callname'    ,callname],
     ['d','ss-id'       ,new_ss_file.getId()],
     ['d','ss-url'      ,new_ss_file.getUrl()],
     ['d','root-id'     ,new_root.getId()],
@@ -42,6 +44,7 @@ function init_external (category = "TEST",callname = get_now()){ //callname is a
     ['d','result-id'   ,new_result.getId()],
     ['d','result-url'  ,new_result.getUrl()],
     ['s','developers'  ,"iamchoking247;korea.kypt"],
+    ['s','register'    ,'{}']
     // ['d','',],    
   ]
 

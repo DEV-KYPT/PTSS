@@ -21,9 +21,9 @@ function main(){
   // Logger.log(r.interpret(2))
   // Logger.log(string_2d(r.st[1].raw,"XXXX",0,true,6))
 
-  var finr = new Finrm();
-  finr.parse(1)
-  Logger.log(finr.interpret(1))
+  // var finr = new Finrm();
+  // finr.parse(1)
+  // Logger.log(finr.interpret(1))
 
   /////////////////////////////////////////////////////////////
   // var s = new St(5,5,3)
@@ -71,12 +71,24 @@ function main(){
   // conv.add_cmd('c')
   // Logger.log(''+conv);
 
-  // Logger.log(`[main]${get_now(true)} before getRange`);
-  // var range = get_ss_spreadsheet().getRange("DATA_P1R1_S1")
-  // Logger.log(`[main]${get_now(true)} after getRange`);
-  // var values = range.getValues();
-  // Logger.log(`[main]${get_now(true)} after getValues`);
 
+  // var [[a,b],[c,d]] = "1,2/45,37".split("/").map(s => s.split(",").map(s => Number(s)));
+  // var [coord1,coord2] = "1,2/45,37".split("/").map(s => s.split(",").map(s => Number(s)));
+  // Logger.log(coord1)
+
+  // var r = new Rm(1,1)
+  // var r = new Finrm()
+
+  // r.parse(1)
+  // // Logger.log(r.interpret(2))
+  // var uin = r.get_uin();
+  // // Logger.log(typeof(uin));
+  // Logger.log(uin);
+  // // var rangelist = get_ss_spreadsheet().getSheetByName("DATA").getRangeList(uin);
+  // var rangelist = get_ss_spreadsheet().getSheetByName("FINAL").getRangeList(uin);
+  // rangelist.activate();
+  // rangelist.setValue("UIN")
+  Logger.log(undefined == null)
 }
 
 

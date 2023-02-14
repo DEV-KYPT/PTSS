@@ -2,35 +2,138 @@
 
 // utility for use in spreadsheet
 
-function make_relative(range = SpreadsheetApp.getActiveRange()){
-  var f_start = range.getFormulas();
+/**
+ *
+ * @param {number} row - The row number of the cell reference. Row 1 is row number 0.
+ * @param {number} column - The column number of the cell reference. A is column number 0.
+ * @returns {string} Returns a cell reference as a string using A1 Notation
+ *
+ * @example
+ *
+ *   getA1Notation(2, 4) returns "E3"
+ *   getA1Notation(2, 4) returns "E3"
+ *
+ */
+function get_a1(row, column){
+  const a1Notation = [`${row}`];
+  const totalAlphabets = 'Z'.charCodeAt() - 'A'.charCodeAt() + 1;
+  let block = column-1;
+  while (block >= 0) {
+    a1Notation.unshift(String.fromCharCode((block % totalAlphabets) + 'A'.charCodeAt()));
+    block = Math.floor(block / totalAlphabets) - 1;
+  }
+  return a1Notation.join('');
+};
+
+function get_a1_notation(row,column,numr = 1,numc = 1,sheet_name = null){
+  if(numr == 1 && numc == 1){return get_a1(row,column)}
+  var not1 = get_a1(row,column);
+  var not2 = get_a1(row+numr-1,column+numc-1);
+  if(sheet_name != null){return String(`'${sheet_name}'${not1}:${not2}`);}
+  return String(`${not1}:${not2}`);
+}
+
+function make_relative(range = SpreadsheetApp.getActiveRange(),do_edit = true,do_log = true){
+  var f_start = get_content(range);
   var count = 0
+  var f_edited = create_2d([f_start.length,f_start[0].length],"");
   for(var idx_row = 1;idx_row <= range.getNumRows();idx_row++){
     for(var idx_col = 1;idx_col <= range.getNumColumns();idx_col++){
       if(f_start[idx_row-1][idx_col-1] == ""){continue;}
-      if(f_start[idx_row-1][idx_col-1].includes("$")){
-        range.getCell(idx_row,idx_col).setFormula(f_start[idx_row-1][idx_col-1].replaceAll("$",""));
+      else if(f_start[idx_row-1][idx_col-1].includes("$")){
+        f_edited[idx_row-1][idx_col-1] = f_start[idx_row-1][idx_col-1].replaceAll("$","");
         count += 1;
+      }
+      else{
+        f_edited[idx_row-1][idx_col-1] = f_start[idx_row-1][idx_col-1];
       }
     }
   }
-  Logger.log(`${count} Formulas edited.`)
-  return count
+  if(do_edit){range.setFormulas(f_edited);}
+  if(do_log) {Logger.log(`${count} Formulas edited.`);}
+  return f_edited;
+}
+
+function get_content(range){ //returns a formula string if contents are a formula, returns value if contents are a value.
+  var values   = range.getValues();
+  var formulas = range.getFormulas();
+  for(var i = 0;i<formulas.length;i++){
+    for(var j = 0;j<formulas[0].length;j++){
+      if(formulas[i][j] == ""){
+        formulas[i][j] = String(values[i][j]);
+      }
+    }
+  }
+  return formulas
+}
+
+function range_spec(range = SpreadsheetApp.getActiveRange()){
+  var readout = "[Range Specifications]";
+  var sheet = range.getSheet();
+  readout += `\n${sheet.getName()}:${range.getA1Notation()}`;
+  readout += `\nlocation: Row ${range.getRow()}, Column ${range.getColumn()}`;
+  readout += `\nsize: ${range.getNumRows()} rows, ${range.getNumColumns()} columns`;
+
+  Logger.log(readout);
+  return readout;
 }
 
 function speedometer(){
   var ss = get_ss_spreadsheet();
   var time_sheet = [];
   var readout = "Speedometer Readings"
+
+  /////////////////////////////////////////////////////
   var ms = get_milisec();
   
-  var a = ss.getRange("DATA_P1R1_S3");
+  var a = ss.getRange("DATA_P1_FULL");
   
   readout += `\n[SPEED] getRange : ${get_milisec()-ms}ms`
+
+  /////////////////////////////////////////////////////
   ms = get_milisec();
 
   var v = a.getValues();
   readout += `\n[SPEED] getValues : ${get_milisec()-ms}ms`
+
+  /////////////////////////////////////////////////////
+  // ms = get_milisec();
+
+  // var t = new Tournament();
+  // t.parse(5);
+  // Logger.log(t.pf[2].rm[4].st[3].interpret());
+  // readout += `\n[SPEED] Tournament parse Level 5 : ${get_milisec()-ms}ms`
+
+  /////////////////////////////////////////////////////
+  ms = get_milisec();
+
+  var t = new Tournament;
+  t.parse(5);
+
+  var sheet_data = ss.getSheetByName("DATA");
+  var uin = t.get_uin();
+  Logger.log(uin);
+  var uin_rl = sheet_data.getRangeList(uin);
+  uin_rl.activate();
+  var uin_ranges = uin_rl.getRanges();
+  Logger.log(uin_ranges.length)
+  readout += `\n[SPEED] Tournament parse Level 5 / uin recovery : ${get_milisec()-ms}ms`
+
+  /////////////////////////////////////////////////////
+  // ms = get_milisec();
+
+  // var fin = new Finrm();
+  // fin.parse(2);
+  // Logger.log(fin.interpret(2))
+  // readout += `\n[SPEED] Final Parse : ${get_milisec()-ms}ms`
+
+  /////////////////////////////////////////////////////
+  // ms = get_milisec();
+
+  // var v = a.getValues();
+  // readout += `\n[SPEED] getValues : ${get_milisec()-ms}ms`
+
+  /////////////////////////////////////////////////////
 
   Logger.log(readout);
   return readout
@@ -58,7 +161,7 @@ function attatch_2d(arrays=[[['1']],[['a','b','c'],['d','e','f']],[[]]],fill_cha
   }
   // Logger.log(max_rows)
   var resized_arrays = [];
-  for(var arr of arrays){resized_arrays.push(resize_2d(arr,[max_rows,undefined],fill_char));}
+  for(var arr of arrays){resized_arrays.push(resize_2d(arr,[max_rows,null],fill_char));}
   // Logger.log(resized_arrays)
   var output_array = [];
   for(var idx_row = 0;idx_row<max_rows;idx_row++){
@@ -70,11 +173,11 @@ function attatch_2d(arrays=[[['1']],[['a','b','c'],['d','e','f']],[[]]],fill_cha
   return output_array
 }
 
-function resize_2d(array = [[]],size = [undefined,undefined],fill_char = ""){
+function resize_2d(array = [[]],size = [null,null],fill_char = ""){
   var row = size[0];
   var col = size[1];
-  if(size[0] == undefined){row = array.length;}
-  if(size[1] == undefined){col = array[0].length;}
+  if(size[0] == null){row = array.length;}
+  if(size[1] == null){col = array[0].length;}
   if(row > array.length){array = array.concat(Array(row-array.length).fill([]));}
   else if(row< array.length){array = array.slice(0,row)}
   for(var idx_row = 0;idx_row<row;idx_row++ ){
@@ -146,9 +249,9 @@ function string_2d(array=[[null]],name='',pre_tabs = 0,output_dims = false,max_s
   return output.slice(0,output.length-1); //cut out last "\n"
 }
 
-function multistring_2d(arrays = [[[]],[[]]],names = undefined,pre_tabs = 0,output_dims = false,max_size = 0,delim = ` | `){
+function multistring_2d(arrays = [[[]],[[]]],names = null,pre_tabs = 0,output_dims = false,max_size = 0,delim = ` | `){
   var lines_raw = []
-  if(names == undefined){names = Array(arrays.length).fill('')}
+  if(names == null){names = Array(arrays.length).fill('')}
 
   for(var idx = 0;idx< arrays.length;idx++){lines_raw.push(string_2d(arrays[idx],names[idx],0,output_dims,max_size).split("\n"))}
   // Logger.log(string_2d(lines_raw))
@@ -223,15 +326,15 @@ function get_cb_style(typ){
 }
 
 function html(s,style = "default",tag = 'span'){
-  if([null,undefined,''].includes(style)){
+  if([null,null,''].includes(style)){
     return str_to_html(`<${tag}>${s}</${tag}>`);
   }
   var st = get_cb_style(style);
   return str_to_html(`<${tag} style="color:${st[0]};font-weight:${st[1]};">${s}</${tag}>`);
 }
 
-function html_table(array,styles = undefined,header = true,){
-  if(styles == undefined){styles = create_2d([array.length,array[0].length],'default');}
+function html_table(array,styles = null,header = true,){
+  if(styles == null){styles = create_2d([array.length,array[0].length],'default');}
   // Logger.log(string_2d(styles))
   var output_html = "<table>";
   var data = copy_2d(array);

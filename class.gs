@@ -5,34 +5,48 @@ class Tournament { //lv0 (top)
     this.ss     = get_ss_spreadsheet();
     this.len_pf = null;
     this.len_rm = null;
-    
+
     this.category = null;
     this.callname = null;
 
     this.draw   = null;
     this.pf     = [null];
+
+    this.raw = null;
+    this.unit_rows = null;
+    this.unit_cols = null;
   }
 
   is_parsed(){return(this.pf.length != 1);}
 
   // lv: how many levels(down) to recurse (0: only my level)
-  parse(lv = 0){
+  parse(lv = 0,raw = null){
     if(this.is_parsed()){return}
 
-    this.category = this.ss.getRange("META_CATEGORY").getValue();
-    this.callname = this.ss.getRange("META_CALLNAME").getValue();
+    // this.category = this.ss.getRange("META_CATEGORY").getValue();
+    // this.callname = this.ss.getRange("META_CALLNAME").getValue();
+    this.category = get_prop_value("category");
+    this.callname = get_prop_value("callname");
 
-    this.len_pf = this.ss.getRange("SEED_PFS").getValue();
-    this.len_rm = this.ss.getRange("SEED_RMS").getValue();
+    if(raw == null){this.raw = this.ss.getRange("DATA_FULL").getValues();}
+    else           {this.raw = raw;}
 
-    this.draw = new Draw();
-    this.draw.parse();
+    // this.len_pf = this.ss.getRange("SEED_PFS").getValue();
+    // this.len_rm = this.ss.getRange("SEED_RMS").getValue();
+    this.len_pf = this.raw[2][2]; //!
+    this.len_rm = this.raw[2][3];
+
+    this.unit_rows = this.raw[0][2]; //!
+    this.unit_cols = this.raw[0][3];
+
+    // this.draw = new Draw();
+    // this.draw.parse();
 
     for(var i = 1;i<=this.len_pf;i++){this.pf.push(new Pf(i,this.len_rm))}
 
     if(lv){
       for(var idx = 1;idx<=this.len_pf;idx++){
-        this.pf[idx].parse(lv-1);
+        this.pf[idx].parse(lv-1,slice_2d(this.raw,[0,this.unit_cols*(idx-1)],[this.unit_rows*(this.len_rm)-1,this.unit_cols*idx - 1]));
       }
     }
   }
@@ -54,8 +68,18 @@ class Tournament { //lv0 (top)
     var output = `Tournament Instance  `;
     if(!this.is_parsed()){return output+ '\t[UNPARSED]';}
     output+= `[${this.category}-${this.callname}]\t[PFS:${this.len_pf}] [RMS:${this.len_rm}]`
-    output += `\n${this.draw.interpret(0)}`;
+    // output += `\n${this.draw.interpret(0)}`;
     return output
+  }
+
+  get_uin(){
+    var notations = [];
+    if(this.is_parsed()){
+      for(var idx_pf = 1;idx_pf <= this.len_pf;idx_pf ++){
+        if(this.pf[idx_pf].is_parsed()){notations = notations.concat(this.pf[idx_pf].get_uin())}
+      }
+    }
+    return notations;
   }
 }
 
@@ -101,17 +125,27 @@ class Pf { //lv1
     this.ss     = get_ss_spreadsheet();
     this.pf_num = pf_num;
     // this.len_rm = len_rm;
-
     this.len_rm = null;    
+
+    this.raw = null;
+
+    this.unit_rows = null;
+    this.unit_cols = null;
+
     this.rm = [null]
   }
 
   is_parsed(){return(this.len_rm != null);}
 
-  parse(lv = 0){
+  parse(lv = 0,raw = null){
     if(this.is_parsed()){return}
+    
+    if(raw == null){this.raw = this.ss.getRange(`DATA_P${this.pf_num}_FULL`).getValues();}
+    else           {this.raw = raw;}
 
-    this.len_rm = this.ss.getRange("SEED_RMS").getValue();
+    this.len_rm    = this.raw[2][3];
+    this.unit_rows = this.raw[0][2]; //!
+    this.unit_cols = this.raw[0][3];
 
     for(var i = 1;i<=this.len_rm;i++){
       // Logger.log(`len:${len_st}`)
@@ -120,7 +154,7 @@ class Pf { //lv1
 
     if(lv){
       for(var idx = 1;idx<=this.len_rm;idx++){
-        this.rm[idx].parse(lv-1);
+        this.rm[idx].parse(lv-1,slice_2d(this.raw,[this.unit_rows*(idx-1),0],[this.unit_rows*idx-1,this.unit_cols-1]));
       }
     }
   }
@@ -144,7 +178,15 @@ class Pf { //lv1
     output += `\t[RMS:${this.len_rm}]`
     return output
   }
-
+  get_uin(){
+    var notations = [];
+    if(this.is_parsed()){
+      for(var idx_rm = 1;idx_rm <= this.len_rm;idx_rm ++){
+        if(this.rm[idx_rm].is_parsed()){notations = notations.concat(this.rm[idx_rm].get_uin())}
+      }
+    }
+    return notations;
+  }
 }
 
 class Rm {
@@ -152,6 +194,8 @@ class Rm {
     this.ss     = get_ss_spreadsheet();
     this.pf_num = pf_num;
     this.rm_num = rm_num;
+
+    this.raw = null;
 
     this.rm_loc;
     this.len_st = null;
@@ -165,28 +209,44 @@ class Rm {
 
   is_parsed(){return(this.st.length != 1);}
 
-  parse(lv = 0){
+  parse(lv = 0,raw = null){
     if(this.is_parsed()){return}
-    this.rm_loc = this.ss.getRange(`DRAW_RM${this.rm_num}`).getValue();
-    this.len_st = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_LEN`).getValue();
 
-    var summary_raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_SUMMARY`).getValues();
-    this.roster = slice_2d(summary_raw,[0,0],[3,1]);
+    if(raw == null){this.raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_FULL`).getValues();}
+    else           {this.raw = raw;}
 
-    this.summary["scr"] = slice_2d(summary_raw,[0,19],[3,19]);
-    this.summary["fw"]  = slice_2d(summary_raw,[0,20],[3,20]);
+    // this.rm_loc = this.ss.getRange(`DRAW_RM${this.rm_num}`).getValue();
+    this.rm_log = this.raw[2][0]; //!
+    // this.len_st = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_LEN`).getValue();
+    this.len_st = this.raw[1][2]; //!
 
-    this.tk = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_TK`).getValue();
-    this.sk = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_SK`).getValue();
+    // var summary_raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_SUMMARY`).getValues();
+    var [idx_s,idx_e] = this.raw[4][0].split("/").map(s => s.split(",").map(s => Number(s)));
+    var summary_raw = slice_2d(this.raw,idx_s,idx_e); //!
 
+    this.roster = slice_2d(summary_raw,[0,0],[3,1]); //!
+
+    this.summary["scr"] = slice_2d(summary_raw,[0,19],[3,19]); //!
+    this.summary["fw"]  = slice_2d(summary_raw,[0,20],[3,20]); //!
+
+    // this.tk = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_TK`).getValue();
+    // this.sk = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_SK`).getValue();
+    var idx_tk = this.raw[4][2].split(",").map(s => Number(s)); //!
+    var idx_sk = this.raw[4][3].split(",").map(s => Number(s));
+    this.tk = this.raw[idx_tk[0]][idx_tk[1]]
+    this.sk = this.raw[idx_sk[0]][idx_sk[1]]
 
     for(var i = 1;i<=this.len_st;i++){
       this.st.push(new St(this.pf_num,this.rm_num,i))
     }
 
+
     if(lv){
+      var idx_st_s = [null,null];
+      var idx_st_e = [null,null];
       for(var idx = 1;idx<=this.len_st;idx++){
-        this.st[idx].parse(lv-1);
+        [idx_st_s,idx_st_e] = this.raw[3][idx-1].split("/").map(s => s.split(",").map(s => Number(s)));
+        this.st[idx].parse(lv-1,slice_2d(this.raw,idx_st_s,idx_st_e));
       }
     }
   }
@@ -214,6 +274,23 @@ class Rm {
     return output
   }
 
+  get_uin(){ // get user input notations
+    var notations = [];
+    if(this.is_parsed()){
+      for(var idx_st = 1;idx_st <= this.len_st;idx_st ++){
+        if(this.st[idx_st].is_parsed()){notations = notations.concat(this.st[idx_st].get_uin())}
+      }
+    }
+    var origin = [this.raw[0][0],this.raw[0][1]];
+
+    var idx_tk = this.raw[4][2].split(",").map(s => Number(s));
+    var idx_sk = this.raw[4][3].split(",").map(s => Number(s));
+
+    notations.push(get_a1_notation(origin[0]+idx_tk[0],origin[1]+idx_tk[1],1,1 )); //tk
+    notations.push(get_a1_notation(origin[0]+idx_sk[0],origin[1]+idx_sk[1],1,1 )); //sk
+    return notations;
+  }
+
 }
 
 
@@ -232,14 +309,16 @@ class St {
 
   is_parsed(){return(this.raw != null)}
 
-  parse(lv = 0){
-    this.raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`).getValues();
+  parse(lv = 0,raw = null){
+    if(raw == null){this.raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`).getValues();}
+    else           {this.raw = raw;}
     // Logger.log(string_2d(this.raw,"RAW",0,true,6))
 
     this.challenge = new Challenge(this.pf_num,this.rm_num,this.st_num)
     this.challenge.parse(0,this.raw);
 
     this.result = slice_2d(this.raw,[1,2],[4,21])
+    this.result[0] = this.result[0].map(e => String(e));
     for(var idx = 0;idx<this.result.length;idx++){this.result[idx].splice(16,3);}
     this.result[0][0] = `Team`;
     this.result[0][1] = 'Name';
@@ -269,12 +348,24 @@ class St {
 
     return output
   }
-  
+
+  get_uin(){ // get user input notations
+    var notations = [];
+    var origin = this.raw[1][0].split(",").map(e => Number(e));
+    // Logger.log(origin);
+    notations.push(get_a1_notation(origin[0]+0,origin[1]+5 ,1,11)); //rejects
+    notations.push(get_a1_notation(origin[0]+2,origin[1]+3 ,3,15)); //content
+    notations.push(get_a1_notation(origin[0]+0,origin[1]+17,1,1 )); //accepted
+    return notations;
+  }
+
 }
 
 class Finrm{
   constructor(){
     this.ss = get_ss_spreadsheet();
+
+    this.raw = null;
 
     this.len_st = null;
     this.summary = {"scr":null,"rank":null}
@@ -286,27 +377,42 @@ class Finrm{
 
   is_parsed(){return(this.finst.length != 1);}
 
-  parse(lv = 0){
+  parse(lv = 0,raw = null){
     if(this.is_parsed()){return}
-    this.len_st = this.ss.getRange(`FINAL_LEN`).getValue();
+    // Logger.log(`[class337]`)
+    if(raw == null){this.raw = this.ss.getRange("FINAL_FULL").getValues();}
+    else           {this.raw = raw;}
 
-    var summary_raw = this.ss.getRange(`FINAL_SUMMARY`).getValues();
+    // this.len_st = this.ss.getRange(`FINAL_LEN`).getValue();
+    this.len_st = this.raw[1][2];
+
+    // var summary_raw = this.ss.getRange(`FINAL_SUMMARY`).getValues();
+    var [idx_s,idx_e] = this.raw[4][0].split("/").map(s => s.split(",").map(s => Number(s)));
+    var summary_raw = slice_2d(this.raw,idx_s,idx_e); //!
+
     this.roster = slice_2d(summary_raw,[0,0],[3,1]);
 
     this.summary["scr"]   = slice_2d(summary_raw,[0,30],[3,30]);
     this.summary["rank"]  = slice_2d(summary_raw,[0,31],[3,31]);
 
-    this.tk = this.ss.getRange(`FINAL_TK`).getValues()[0].filter(e => e != '');
-    this.sk = this.ss.getRange(`FINAL_SK`).getValues()[0].filter(e => e != '');
 
+    // this.tk = this.ss.getRange(`FINAL_TK`).getValues()[0].filter(e => e != '');
+    // this.sk = this.ss.getRange(`FINAL_SK`).getValues()[0].filter(e => e != '');
+    var [idx_tk_s,idx_tk_e] = this.raw[4][2].split("/").map(s => s.split(",").map(s => Number(s)));
+    var [idx_sk_s,idx_sk_e] = this.raw[4][3].split("/").map(s => s.split(",").map(s => Number(s)));
+    this.tk = slice_2d(this.raw,idx_tk_s,idx_tk_e)[0].filter(e=> e != '');
+    this.sk = slice_2d(this.raw,idx_sk_s,idx_sk_e)[0].filter(e=> e != '');
 
     for(var i = 1;i<=this.len_st;i++){
       this.finst.push(new Finst(i))
     }
 
     if(lv){
+      var idx_st_s = [null,null];
+      var idx_st_e = [null,null];
       for(var idx = 1;idx<=this.len_st;idx++){
-        this.finst[idx].parse(lv-1);
+        [idx_st_s,idx_st_e] = this.raw[3][idx-1].split("/").map(s => s.split(",").map(s => Number(s)));
+        this.finst[idx].parse(lv-1,slice_2d(this.raw,idx_st_s,idx_st_e));
       }
     }
   }
@@ -334,6 +440,28 @@ class Finrm{
     return output
   }
 
+
+  get_uin(){ // get user input notations
+    var notations = [];
+    if(this.is_parsed()){
+      for(var idx_st = 1;idx_st <= this.len_st;idx_st ++){
+        if(this.finst[idx_st].is_parsed()){notations = notations.concat(this.finst[idx_st].get_uin())}
+      }
+    }
+    var origin = [this.raw[0][0],this.raw[0][1]];
+
+    var [idx_tk_s,idx_tk_e] = this.raw[4][2].split("/").map(s => s.split(",").map(s => Number(s)));
+    var [idx_sk_s,idx_sk_e] = this.raw[4][3].split("/").map(s => s.split(",").map(s => Number(s)));
+    // var idx_tk = this.raw[4][2].split(",").map(s => Number(s));
+    // var idx_sk = this.raw[4][3].split(",").map(s => Number(s));
+
+    notations.push(get_a1_notation(origin[0]+idx_tk_s[0],origin[1]+idx_tk_s[1],idx_tk_e[0]-idx_tk_s[0]+1,idx_tk_e[1]-idx_tk_s[1]+1 )); //tk
+    notations.push(get_a1_notation(origin[0]+idx_sk_s[0],origin[1]+idx_sk_s[1],idx_sk_e[0]-idx_sk_s[0]+1,idx_sk_e[1]-idx_sk_s[1]+1 )); //sk
+
+    notations.push(get_a1_notation(origin[0]+8,origin[1]+0,4,1)); //roster#
+    return notations;
+  }
+
 }
 
 class Finst{
@@ -354,8 +482,9 @@ class Finst{
 
   is_parsed(){return(this.raw != null)}
 
-  parse(lv = 0){
-    this.raw = this.ss.getRange(`FINAL_S${this.st_num}`).getValues();
+  parse(lv = 0,raw = null){
+    if(raw == null){this.raw = this.ss.getRange(`FINAL_S${this.st_num}`).getValues();}
+    else           {this.raw = raw;}
 
     this.prb = this.raw[0][28]
 
@@ -388,6 +517,17 @@ class Finst{
     output += `\n${string_2d(this.result,"RESULT",1,true,5)}`
 
     return output
+  }
+
+  get_uin(){
+    var notations = [];
+    var origin = this.raw[1][0].split(",").map(e => Number(e));
+    // Logger.log(origin);
+    // notations.push(get_a1_notation(origin[0]+0,origin[1]+5 ,1,11)); //rejects
+    notations.push(get_a1_notation(origin[0]+2,origin[1]+3 ,3,26)); //content
+    notations.push(get_a1_notation(origin[0]+0,origin[1]+28,1,1 )); //accepted
+    notations.push(get_a1_notation(origin[0]+1,origin[1]+4 ,1,25)); //Jurors
+    return notations;
   }
 }
 
@@ -453,9 +593,10 @@ class Challenge{
 
   is_parsed(){return this.parsed;}
 
-  parse(lv = 0,raw = undefined,verbose = false){
+  parse(lv = 0,raw = null,verbose = false){
     if(this.raw == null){ // use getRange / getValues if failed to get this.raw from cache.
-      this.raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`).getValues();
+      if(raw == null){this.raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`).getValues();}
+      else{this.raw = raw;}
     }
     this.rep_team = this.raw[2][2].toString();
     this.opp_team = this.raw[3][2].toString();
@@ -478,9 +619,7 @@ class Challenge{
     this.rej = this.raw[1-1].slice(6-1,16-1+1).map(str => Number(str)).filter(num => num != 0);
     this.acc = this.raw[1-1][18-1];
 
-    if(this.select == null){
-      this.select = this.ss.getRange("RULE_PRB_SEL").getValues()[0][this.pf_num-1];
-    }
+    this.select = (raw[6][0] != "");
 
     if(this.select){
       this.rej = [];
@@ -493,9 +632,8 @@ class Challenge{
     this.nrej    = this.constraints["a"].length + this.rej.length
     this.weight  = this.raw[2][19];
 
-    if(this.penalty ==  null){
-      this.penalty = this.nrej > this.ss.getRange("RULE_SCR_AR").getValue();
-    }
+    // if(this.penalty ==  null){this.penalty = this.nrej > this.ss.getRange("RULE_SCR_AR").getValue();}
+    this.penalty = (this.nrej > this.raw[6][1]); //!
     this.parsed = true;
     if(verbose){Logger.log(`[CHALLENGE-PHARSE] Elapsed time: ${get_milisec() - this.start_ms}ms`)}
   }
@@ -603,20 +741,31 @@ class Challenge{
 
 // Separate class defined for pharsing leaderboard ("BOARD") information
 class Board{
-  constructor(){
+  constructor(pf_num){
     this.ss = get_ss_spreadsheet();
+    this.current_pf = pf_num;
+
+    this.raw         = null;
+
     this.content_num = null;
     this.content_rank= null;
-    this.current_pf = null;
   }
   
-  is_parsed(){return this.current_pf != null;}
+  is_parsed(){return this.raw != null;}
 
   parse(){
     if(this.is_parsed()){return;}
-    this.current_pf = this.ss.getRange("BOARD_PF").getValue();
-    this.content_num= this.ss.getRange("BOARD_CONTENT_NUM").getValues();
-    this.content_rank=this.ss.getRange("BOARD_CONTENT_RANK").getValues();
+    // this.current_pf = this.ss.getRange("BOARD_PF").getValue();
+    // Logger.log(`SCORE_P${this.current_pf}`)
+    this.raw = this.ss.getRange(`SCORE_P${this.current_pf}`).getValues();
+
+    var headers = this.ss.getRange("BOARD_HEADER").getValues();
+
+    this.raw = headers.concat(this.raw);
+    // this.content_num= this.ss.getRange("BOARD_CONTENT_NUM").getValues();
+    // this.content_rank=this.ss.getRange("BOARD_CONTENT_RANK").getValues();
+    this.content_num  = slice_2d(this.raw,[1,1] ,[33,10]);
+    this.content_rank = slice_2d(this.raw,[1,13],[33,22]);
   }
 
   interpret(){return this.toString();}
@@ -627,7 +776,7 @@ class Board{
     // Logger.log([this.roster,this.summary["scr"],this.summary["fw"]])
     output += `\t[~ PF${this.current_pf}]`
     output += `\n${multistring_2d([this.content_num,this.content_rank],["BY NUMBER","BY RANK"],0,true,6)}`
-    return output    
+    return output
   }
 }
 
@@ -653,8 +802,8 @@ class Core{
   toString(){
     var output = `Core`
     if(!this.is_parsed()){return output + "\t[UNPARSED]"}
-    output += `\n${multistring_2d([this.content_teams,this.content_prbs],undefined,0,false,6)}`
-    output += `\n\n${multistring_2d([this.content_teams,this.content_names],undefined,0,false,5)}`
+    output += `\n${multistring_2d([this.content_teams,this.content_prbs],null,0,false,6)}`
+    output += `\n\n${multistring_2d([this.content_teams,this.content_names],null,0,false,5)}`
     return output  
   }
 }
@@ -701,10 +850,6 @@ class Select{
 
 }
 
-// Separate class defined for pharsing Final round
-class Final{
-  //TODO
-}
 
 // Separate class for pharsing rules of challenge (used in chatbot)
 class Rule{

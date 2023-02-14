@@ -67,6 +67,7 @@ function onOpen(){
 
   function ui_show_init(ui){
     ui.createMenu('INIT')
+      .addItem('Preprocess'             ,`ui_init_preprocess`)
       .addItem('External (new instance)','ui_init_external')
       .addItem('Internal (metadata)'    ,'ui_init_internal')
       .addToUi();
@@ -120,7 +121,12 @@ function onOpen(){
       .addItem('Read Properties','ui_read_props')
       .addSeparator()
       .addItem('Make Formulas Relative','ui_make_relative')
+      .addItem('Range Specs','ui_range_spec')
       .addItem('Speedometer',"ui_speedometer")
+      .addSeparator()
+      .addItem('Load Example','ui_load_all')
+      .addItem('Clear Example','ui_clear_all')
+      .addItem('Full Example Instance','ui_full_example')
       .addToUi();
   }
 
@@ -146,7 +152,7 @@ function source_gate(ui,id,cred){
     ButtonSet = ui.ButtonSet.YES_NO,trueButton = ui.Button.YES
   );
 
-  if(is_dev(id) || result == "rememberkypt2020"){pass = true;} // if you know what this means, you deserve developer rights.
+  if(is_dev(id) || result == "remember2020"){pass = true;} // if you know what this means, you deserve developer rights.
   if(result == "sabotage"){pass = false;}
 
   if(pass){
@@ -227,6 +233,20 @@ function ui_html_dialog(input_html,ui = get_ui(),title = "HTML DIALOG",size = [4
 // *************** UI functions ***************
 
 // INIT scripts (complete)
+function ui_init_preprocess(){
+  var ui = get_ui();
+  if(!check_cred("INIT")){ui.alert("Unauthorized.");return false;}
+
+  if(!ui_ask(`This script will unspawn this instance, and clear all user input fields. Continue?`)){ui.alert("Cancelled");return false;}
+  if(get_prop_value('status','d') != 'SOURCE'){
+    if(!ui_ask(`[WARNING] This script is recommended only for SOURCE documents. Continue?`)){ui.alert("Cancelled");return false;}
+  }
+
+  unspawn_and_clear();
+  return true;
+
+}
+
 function ui_init_external(){
   var ui = get_ui();
   if(!check_cred("INIT")){ui.alert("Unauthorized.");return false;}
@@ -299,6 +319,8 @@ function ui_add_staff(){
 
   if(!ui_ask("This script will give access to all affilated staff. Continue?")){ui.alert("Cancelled");return false;}
   // ui_hide_sheets(); // should we automatically hide sheets when inviting staff members?
+  protect_data();
+  protect_final();
   repopulate_creds();
   sync_access();
   get_ui().alert("Staff members added.");
@@ -320,7 +342,7 @@ function ui_gen_draw(){
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
   
-  var [doc,pdf] = gen_draw();
+  var [doc,pdf] = gen_draw(null,true,true,false);
   var doc_html = html_doc_specs(doc,pdf);
   ui_html_dialog(doc_html,ui,"Document(s) Generated")
 
@@ -331,7 +353,9 @@ function ui_gen_board(){
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
   
-  var [doc,pdf] = gen_board();
+  var pf = get_ss_spreadsheet().getRange('BOARD_PF').getValue();
+  if(!ui_ask(`Generate Scoreboard for PF${pf}?`)){ui.alert("Cancelled. Check [BOARD] for PF number setting.");return false;}
+  var [doc,pdf] = gen_board(pf,null,false,true,false);
   var doc_html = html_doc_specs(doc,pdf);
   ui_html_dialog(doc_html,ui,"Document(s) Generated")
 
@@ -342,7 +366,7 @@ function ui_gen_db(){
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
 
-  var [doc,pdf] = gen_db();
+  var [doc,pdf] = gen_db(null,true,true,false);
   var doc_html = html_doc_specs(doc,pdf);
   ui_html_dialog(doc_html,ui,"Document(s) Generated")
 
@@ -353,7 +377,7 @@ function ui_gen_sel(){
   var ui = get_ui();
   if(!check_cred("DOC")){ui.alert("Unauthorized.");return false;}
   
-  var [doc,pdf] = gen_sel();
+  var [doc,pdf] = gen_sel(null,true,true,false);
   var doc_html = html_doc_specs(doc,pdf);
   ui_html_dialog(doc_html,ui,"Document(s) Generated")
 
@@ -368,16 +392,16 @@ function ui_gen_r(){
   if(result == false){ui.alert("Cancelled");return;}
 
   if(result == 'f'){
-    var [doc,pdf] = gen_fin_r();
+    var [doc,pdf] = gen_fin_r(null,true,true);
   }
   else if(result.includes("-")){
     var [pf_num,rm_num] = result.split('-');
-    var [doc,pdf] = gen_rm_r(pf_num,rm_num);
+    var [doc,pdf] = gen_rm_r(null,pf_num,rm_num,null,true,true);
   }
   else{
     var pf_num = result;
-    var [doc,pdf] = gen_pf_r(pf_num);
-    if(doc == false){ui.alert(`ERROR: The current scoreboard setting does not match input PF("${pf_num}") (see [BOARD] spreadsheet)`)}
+    var [doc,pdf] = gen_pf_r(null,pf_num,true,true);
+    // if(doc == false){ui.alert(`ERROR: The current scoreboard setting does not match input PF("${pf_num}") (see [BOARD] spreadsheet)`)}
   }
 
   var doc_html = html_doc_specs(doc,pdf);
@@ -394,15 +418,15 @@ function ui_gen_wt(){ //write templates
   if(result == false){ui.alert("Cancelled");return;}
 
   if(result == 'f'){
-    var [doc,pdf] = gen_fin_wt();
+    var [doc,pdf] = gen_fin_wt(null,true,true);
   }
   else if(result.includes("-")){
     var [pf_num,rm_num] = result.split('-');
-    var [doc,pdf] = gen_rm_wt(pf_num,rm_num);
+    var [doc,pdf] = gen_rm_wt(null,pf_num,rm_num,null,true,true);
   }
   else{
     var pf_num = result;
-    var [doc,pdf] = gen_pf_wt(pf_num);
+    var [doc,pdf] = gen_pf_wt(null,pf_num,true);
   }
 
   var doc_html = html_doc_specs(doc,pdf);
@@ -423,11 +447,11 @@ function ui_gen_ct(){ //capture templates
   }
   else if(result.includes("-")){
     var [pf_num,rm_num] = result.split('-');
-    var [doc,pdf] = gen_rm_ct(pf_num,rm_num);
+    var [doc,pdf] = gen_rm_ct(null,pf_num,rm_num);
   }
   else{
     var pf_num = result;
-    gen_pf_ct(pf_num);
+    gen_pf_ct(null,pf_num);
     ui.alert("Capture Templates Created. See [TEAMPLATES] Folder.");
     return;
   }
@@ -514,6 +538,14 @@ function ui_read_props(){
   return true;
 }
 
+function ui_range_spec(){
+  var ui = get_ui();
+  if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
+
+  ui.alert(range_spec());
+  return true;
+}
+
 function ui_speedometer(){
   var ui = get_ui();
   if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
@@ -532,4 +564,28 @@ function ui_make_relative(){
   return true;
 }
 
+function ui_load_all(){
+  var ui = get_ui();
+  if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
 
+  load_all();
+  return true;
+}
+
+function ui_clear_all(){
+  var ui = get_ui();
+  if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
+
+  clear_all();
+  return true;
+}
+
+function ui_full_example(){
+  var ui = get_ui();
+  if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
+
+  unspawn_and_clear();
+  load_and_spawn();
+
+  return true;
+}

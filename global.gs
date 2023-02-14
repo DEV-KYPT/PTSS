@@ -3,7 +3,7 @@
  * [global] The version number.
  * @type {string}
  */
-const VERSION = 'v1.0.0' //all version info's displayed reference this string
+const VERSION = 'v1.1.0' //all version info's displayed reference this string
 
 function get_ui(){
   try{
@@ -45,11 +45,11 @@ function get_milisec(){
  * [global] Fetches all named ranges (type:namedRange) with specified name and exactness
  * 
  */
-function get_nr(name,name2 = '',exact = false) {
+function get_nr(name = null,name2 = null,exact = false) {
   var nr_raw = SpreadsheetApp.getActive().getNamedRanges();
   // Logger.log(nr_raw)
   var nrs = [];
-  if(name == undefined){return nr_raw;}
+  if(name == null){return nr_raw;}
   for(var nr of nr_raw){
     if(exact){if(nr.getName()==name){return nr;}}
     else if(nr.getName().includes(name) && nr.getName().includes(name2)){

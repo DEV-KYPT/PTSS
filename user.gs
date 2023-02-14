@@ -196,17 +196,61 @@ function remove_access(){ //removes all access to files (except owner)
   }
 }
 
-/////////////////////////////////////
 
-function clear_staff(){
-  var ssSpreadsheetFile = DriveApp.getFileById(PropertiesService.getDocumentProperties().getProperty('ssId'));
-  var resultFolder = DriveApp.getFileById(PropertiesService.getDocumentProperties().getProperty('folderID_result'));
-  var templateFolder = DriveApp.getFileById(PropertiesService.getDocumentProperties().getProperty('folderID_template'));
+//////////////////////////////// PROTECTION
+function protect_data(){
+  var ss = get_ss_spreadsheet();
+  var sheet_data = ss.getSheetByName("DATA");
+  var t = new Tournament();
+  t.parse(5);
+  var uin = t.get_uin();
+  var uin_rl = sheet_data.getRangeList(uin);
+  var uin_ranges = uin_rl.getRanges();
 
-  for(var file of [ssSpreadsheetFile,resultFolder,templateFolder]){
-    var editors = file.getEditors();
-    var viewers = file.getViewers();
-    for (var ed of editors){file.removeEditor(ed);}
-    for (var ve of viewers){file.removeViewer(ve);}
-  }
+  var protection = sheet_data.protect();
+  protection.setUnprotectedRanges(uin_ranges);
+
+  var editors = protection.getEditors().map(e => e.getEmail());
+  var e_remove = [];
+  var devs = get_prop_value('developers','s').split(";").map(e => e+"@gmail.com");
+  for(var email of editors){if(!devs.includes(email)){e_remove.push(email);}}
+  protection.removeEditors(e_remove);
+
+  protection.setDescription(`[PTSS ${VERSION}] Protection set at ${get_now()}`)
+
+
+  Logger.log(`[PROTECT-DATA] Protected [DATA] with ${uin_ranges.length} exceptions.`)
 }
+
+function protect_final(){
+  var ss = get_ss_spreadsheet();
+  var sheet_final = ss.getSheetByName("FINAL");
+  var fin = new Finrm();
+  fin.parse(5);
+  var uin = fin.get_uin();
+  var uin_rl = sheet_final.getRangeList(uin);
+  var uin_ranges = uin_rl.getRanges();
+
+  var protection = sheet_final.protect();
+  protection.setUnprotectedRanges(uin_ranges);
+
+  var editors = protection.getEditors().map(e => e.getEmail());
+  var e_remove = [];
+  var devs = get_prop_value('developers','s').split(";").map(e => e+"@gmail.com");
+  for(var email of editors){if(!devs.includes(email)){e_remove.push(email);}}
+  protection.removeEditors(e_remove);
+
+  protection.setDescription(`[PTSS ${VERSION}] Protection set at ${get_now()}`)
+
+
+  Logger.log(`[PROTECT-FINAL] Protected [FINAL] with ${uin_ranges.length} exceptions.`)
+}
+
+
+
+
+
+
+
+
+

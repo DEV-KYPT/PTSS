@@ -7,11 +7,11 @@ class Quote{
   //(\n)<userid>++<time>++<cmd> (--> parsed as a Quote Instance)
 
   //Quote instances also have a "resp" property, which makes it easy to bookkeep and show outputs
-  constructor(cmd_string = undefined){ // formatted: (userID)++(timestamp)++(command)
+  constructor(cmd_string = null){ // formatted: (userID)++(timestamp)++(command)
     this.user_id = null;
     this.time    = null;
     this.cmd     = null;
-    if(cmd_string != undefined){this.parse(cmd_string);}
+    if(cmd_string != null){this.parse(cmd_string);}
 
     this.resp = '';
     this.resp_typ = 'default';
@@ -409,7 +409,7 @@ class Chat{
   }
 
   html_teams(){
-    return html_table(this.table["teams"],undefined,true);
+    return html_table(this.table["teams"],null,true);
   }
 
   html_prbs(){

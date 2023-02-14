@@ -78,8 +78,8 @@ function doc_init(name=get_now(),orientation = "p",header = true,typ = "r"){
 }
 
 // Table Handling
-function table_set_style(table,columnWidths,fontSize = 9,style = undefined,centered = false,padding = [3,1,2,2]){
-  if(style == undefined){ //default style
+function table_set_style(table,columnWidths,fontSize = 9,style = null,centered = false,padding = [3,1,2,2]){
+  if(style == null){ //default style
     style = {};
     style[DocumentApp.Attribute.HORIZONTAL_ALIGNMENT] = DocumentApp.HorizontalAlignment.CENTER;
     style[DocumentApp.Attribute.VERTICAL_ALIGNMENT]   = DocumentApp.VerticalAlignment.CENTER;
@@ -120,15 +120,15 @@ function generate_pdf(doc){
 }
 
 // Pre/post processing routines
-function doc_preprocess(doc_in = undefined,name = '[DOC]',orientation = 'p',header = true,typ = 'r'){
+function doc_preprocess(doc_in = null,name = '[DOC]',orientation = 'p',header = true,typ = 'r'){
   var doc = null;
-  if(doc_in == undefined){doc =  doc_init(name,orientation,header,typ);}
+  if(doc_in == null){doc =  doc_init(name,orientation,header,typ);}
   else                   {doc = doc_in;}
 
   var body   = doc.getBody();
 
   var p_1 = null
-  if(doc_in == undefined){p_1 = doc.getParagraphs()[0];}
+  if(doc_in == null){p_1 = doc.getParagraphs()[0];}
   else                   {body.appendPageBreak();p_1 = doc.appendParagraph('');}
 
   return [doc,body,p_1];
@@ -163,7 +163,7 @@ function add_st(st,body,typ = "r"){ //add a [St] instance as a neat table to the
 
     var table = body.appendTable(a);
     var col_w = [80,40,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]; //av width: 595.276
-    var style_table = table_set_style(table,col_w,9,undefined,true,[2,1,1,1]);
+    var style_table = table_set_style(table,col_w,9,null,true,[2,1,1,1]);
   }
   else{ // add team names and name placeholders
     p_pre_data.setFontSize(13).editAsText().setBold(true);
@@ -211,7 +211,7 @@ function add_finst(finst,body,typ = "r"){
 
     var table = body.appendTable(a);
     
-    var style_table = table_set_style(table,cw,8,undefined,false,[0,0,0,0]);
+    var style_table = table_set_style(table,cw,8,null,false,[0,0,0,0]);
     return table
   }
   else{ // add team names and name placeholders
@@ -270,10 +270,11 @@ function add_confirm(body,entities = ["Administrator"],orientation = "p",spacing
 }
 
 // Round documents
-function gen_rm_r(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true){
+function gen_rm_r(rm_obj = null,pf = 4,rm = 3,doc_in = null,out_doc = true,out_pdf = true){
 
-  var r = new Rm(pf,rm);  // the room instance
-  r.parse(1);
+  var r = null;
+  if(rm_obj == null){r = new Rm(pf,rm);r.parse(1);}
+  else              {r = rm_obj;}
 
   var [doc,body,p_title] = doc_preprocess(doc_in,`[${get_full_name()}] pf${pf}-rm${rm} ${get_now()}`);
 
@@ -296,9 +297,11 @@ function gen_rm_r(pf = 4,rm = 3,doc_in = undefined,out_doc = true,out_pdf = true
   return doc_postprocess(doc,out_pdf);
 }
 
-function gen_rm_wt(pf = 5,rm = 7,doc_in = undefined,out_doc = true,out_pdf = true){
-  var r = new Rm(pf,rm);  // the room instance
-  r.parse(1);
+function gen_rm_wt(rm_obj = null,pf = 5,rm = 7,doc_in = null,out_doc = true,out_pdf = true){
+
+  var r = null;
+  if(rm_obj == null){r = new Rm(pf,rm);r.parse(1);}
+  else              {r = rm_obj;}
 
   var [doc,body,p_title] = doc_preprocess(doc_in,`[WRITE TEMPLATE] pf${pf}-rm${rm}`,'p',true,'wt');
 
@@ -318,10 +321,11 @@ function gen_rm_wt(pf = 5,rm = 7,doc_in = undefined,out_doc = true,out_pdf = tru
   return doc_postprocess(doc,out_pdf)
 }
 
-function gen_rm_ct(pf = 5, rm = 7,doc_in = undefined,out_doc = true,out_pdf = false){
+function gen_rm_ct(rm_obj = null,pf = 5, rm = 7,doc_in = null,out_doc = true,out_pdf = false){
 
-  var r = new Rm(pf,rm);  // the room instance
-  r.parse(1);
+  var r = null;
+  if(rm_obj == null){r = new Rm(pf,rm);r.parse(1);}
+  else              {r = rm_obj;}
 
   var [doc,body,p_title] = doc_preprocess(doc_in,`[CAPTURE TEMPLATE] pf${pf}-rm${rm}`,'p',true,'ct');
 
@@ -344,7 +348,7 @@ function gen_rm_ct(pf = 5, rm = 7,doc_in = undefined,out_doc = true,out_pdf = fa
 }
 
 // Finals documents
-function gen_fin_r(doc_in = undefined,out_doc = true,out_pdf = true){
+function gen_fin_r(doc_in = null,out_doc = true,out_pdf = true){
   var finr = new Finrm();
   finr.parse(1);
 
@@ -369,7 +373,7 @@ function gen_fin_r(doc_in = undefined,out_doc = true,out_pdf = true){
 
 }
 
-function gen_fin_wt(doc_in = undefined,out_doc = true,out_pdf = true){
+function gen_fin_wt(doc_in = null,out_doc = true,out_pdf = true){
 
   var finr = new Finrm();  // the room instance
   finr.parse(1);
@@ -392,7 +396,7 @@ function gen_fin_wt(doc_in = undefined,out_doc = true,out_pdf = true){
   return doc_postprocess(doc,out_pdf)
 }
 
-function gen_fin_ct(doc_in = undefined,out_doc = true,out_pdf = false){
+function gen_fin_ct(doc_in = null,out_doc = true,out_pdf = false){
   var finr = new Finrm();  // the room instance
   finr.parse(1);
 
@@ -417,23 +421,23 @@ function gen_fin_ct(doc_in = undefined,out_doc = true,out_pdf = false){
 }
 
 // PF-level document generations
-function gen_pf_r(pf = 3,out_doc = true,out_pdf = true){
-  var doc = gen_board(undefined,true,false,true)[0];
+function gen_pf_r(pf_obj = null,pf = 5,out_doc = true,out_pdf = true){
+  var doc = gen_board(pf,null,true,false,true)[0];
   doc.setName(`[${get_full_name()}] pf${pf} ${get_now()}`);
   var doc_id = doc.getId();
 
-  var b = new Board();
-  var p = new Pf(pf);
-  b.parse();
-  p.parse(0);
+  var p = null;
+  if(pf_obj == null){p = new Pf(pf);p.parse(3);}
+  else              {p = pf_obj;}
+  // Logger.log(p.rm[3].interpret(3))
 
-  if(pf != b.current_pf){
-    Logger.log("Input PF number does not equal current scoreboard!");
-    return [false,null]
-  }
+  // if(pf != b.current_pf){
+  //   Logger.log("Input PF number does not equal current scoreboard!");
+  //   return [false,null]
+  // }
 
   for(var rm = 1;rm <= p.len_rm;rm++){
-    doc = gen_rm_r(pf,rm,doc,true,false,'r')[0];
+    doc = gen_rm_r(p.rm[rm],pf,rm,doc,true,false,'r')[0];
     Logger.log(`[GEN-PF] Generation for PF${pf} RM${rm} Complete`)
   }
 
@@ -441,39 +445,49 @@ function gen_pf_r(pf = 3,out_doc = true,out_pdf = true){
 
 }
 
-function gen_pf_wt(pf = 6,out_pdf = true){ //generate write templates for given PF (all wt takes too long.)
-  var t = new Tournament();
-  t.parse(0);
+function gen_pf_wt(pf_obj = null,pf = 6,out_pdf = true){ //generate write templates for given PF (all wt takes too long.)
+  // var t = new Tournament();
+  // t.parse(0);
+
+  var p = null;
+  if(pf_obj == null){p = new Pf(pf);p.parse(3);}
+  else              {p = pf_obj;}
+
   Logger.log(`[GEN-WT] Generating Write Template for PF${pf}`);
 
-  var doc = gen_rm_wt(pf,1,undefined,true,false)[0];
+  var doc = gen_rm_wt(p.rm[1],pf,1,null,true,false)[0];
   Logger.log(`[GEN-WT] PF${pf} RM1 Complete.`);
 
   doc.setName(`[WRITE TEMPLATE] pf${pf}`)
-  for(var rm = 2;rm<=t.len_rm;rm++){
-    doc = gen_rm_wt(pf,rm,doc,true,false)[0];
+  for(var rm = 2;rm<=p.len_rm;rm++){
+    doc = gen_rm_wt(p.rm[rm],pf,rm,doc,true,false)[0];
     Logger.log(`[GEN-WT] PF${pf} RM${rm} Complete.`);
   }
 
   return doc_postprocess(doc,out_pdf)
 }
 
-function gen_pf_ct(pf = 6,out_pf = false){
-  var t = new Tournament();
-  t.parse(0);
+function gen_pf_ct(pf_obj = null,pf = 3,out_pdf = false){
+  // var t = new Tournament();
+  // t.parse(0);
+
+  var p = null;
+  if(pf_obj == null){p = new Pf(pf);p.parse(3);}
+  else              {p = pf_obj;}
+
   Logger.log(`[GEN-CT] Generating Capture Template for PF${pf}`);
 
-  for(var rm = 1;rm<=t.len_rm;rm++){
-    gen_rm_ct(pf,rm,undefined,true,false);
+  for(var rm = 1;rm<=p.len_rm;rm++){
+    gen_rm_ct(p.rm[rm],pf,rm,null,true,false);
     Logger.log(`[GEN-CT] PF${pf} RM${rm} Complete.`);
   }
 }
 
 // Tournament-general documents
-function gen_draw(doc_in = undefined,out_doc = true, out_pdf = true,include_confirm = true){
+function gen_draw(doc_in = null,out_doc = true, out_pdf = true,include_confirm = true){
 
-  var t = new Tournament();
-  t.parse(0);
+  var d = new Draw();
+  d.parse(0);
 
   var [doc,body,p_title] = doc_preprocess(doc_in,`[${get_full_name()}] draw ${get_now()}`,'p');
 
@@ -485,26 +499,26 @@ function gen_draw(doc_in = undefined,out_doc = true, out_pdf = true,include_conf
   p_note.editAsText().setFontSize(8);
   body.appendParagraph('').setItalic(false);
 
-  var a_draw = t.draw.draw_full;
+  var a_draw = d.draw_full;
 
   for(var i = 1;i < a_draw[0].length;i += 2){a_draw = clear_2d(a_draw,[0,i],[a_draw.length-1,i]);}
   // Logger.log(string_2d(a_draw))
   
   var t_draw = body.appendTable(a_draw);
-  var cwf_draw = 560/(2+5.5*t.len_rm); //av width: 595.276 //cwf: column width factor
+  var cwf_draw = 560/(2+5.5*d.len_rm); //av width: 595.276 //cwf: column width factor
   var cw_draw = [2*cwf_draw];
-  for(var i = 0;i<t.len_rm;i++){cw_draw = cw_draw.concat([0.5*cwf_draw,5*cwf_draw]);}
+  for(var i = 0;i<d.len_rm;i++){cw_draw = cw_draw.concat([0.5*cwf_draw,5*cwf_draw]);}
 
-  var st_draw = table_set_style(t_draw,cw_draw,9,undefined,true,[2,1,1,1]);
+  var st_draw = table_set_style(t_draw,cw_draw,9,null,true,[2,1,1,1]);
 
   // roster
-  var a_roster = t.draw.draw_roster.map(row => row.map(e => String(e)));
+  var a_roster = d.draw_roster.map(row => row.map(e => String(e)));
   var col_len = 12; //number of teams to include in one col.
   var a_roster_cut = [];
-  for(var i = 0;i<=t.draw.num_teams;i += col_len){
+  for(var i = 0;i<=d.num_teams;i += col_len){
     var j = i + col_len;
-    if(j > t.draw.num_teams){j = t.draw.num_teams};
-    // Logger.log([i,j,t.draw.num_teams])
+    if(j > d.num_teams){j = d.num_teams};
+    // Logger.log([i,j,d.num_teams])
     a_roster_cut.push(a_roster.slice(i,j));
     a_roster_cut.push([[" "]]);//empty column for spacing
   }
@@ -513,7 +527,7 @@ function gen_draw(doc_in = undefined,out_doc = true, out_pdf = true,include_conf
   for(var col = 0;col<a_roster_cut.length;col+=2){a_roster_cut[col] = a_header.concat(a_roster_cut[col]);}
   // Logger.log(multistring_2d(a_roster_cut))
   var a_roster_processed = attatch_2d(a_roster_cut);
-  // Logger.log(string_2d(a_roster_processed,undefined,0,true))
+  // Logger.log(string_2d(a_roster_processed,null,0,true))
 
   body.appendParagraph("Draw Placement").setHeading(DocumentApp.ParagraphHeading.NORMAL);
   var t_roster_cut = body.appendTable(a_roster_processed);
@@ -522,15 +536,15 @@ function gen_draw(doc_in = undefined,out_doc = true, out_pdf = true,include_conf
   for(var i = 0;i<a_roster_cut.length/2;i++){cw_roster = cw_roster.concat([1.5*cwf_roster,4.5*cwf_roster,0.5*cwf_roster]);}
   // Logger.log(cw_roster)
 
-  var st_roster = table_set_style(t_roster_cut,cw_roster,9,undefined,true,[2,1,1,1]);
+  var st_roster = table_set_style(t_roster_cut,cw_roster,9,null,true,[2,1,1,1]);
 
   if(include_confirm){add_confirm(body,['Administrator'],'p',2);}
 
   return doc_postprocess(doc,out_pdf)
 }
 
-function gen_board(doc_in = undefined,out_doc = true,out_pdf = true,include_confirm = true){
-  var b = new Board();
+function gen_board(pf = 5,doc_in = null,out_doc = true,out_pdf = true,include_confirm = true){
+  var b = new Board(pf);
   b.parse();
 
   var [doc,body,p_title] = doc_preprocess(doc_in,`[${get_full_name()}] scoreboard pf${b.current_pf} ${get_now()}`);
@@ -545,15 +559,15 @@ function gen_board(doc_in = undefined,out_doc = true,out_pdf = true,include_conf
   // body.appendParagraph('').setItalic(false);
 
   var tb = doc.appendTable(b.content_rank.map(row => row.map(e => String(e))));
-  var style = table_set_style(tb,[140,40,40,40,40,40,40,70,70,40],12);
+  var style = table_set_style(tb,[140,40,40,40,40,40,40,70,70,40],11,null,true,[2,1,1,1]);
 
-  if(include_confirm){add_confirm(body,['Evaluator','Administrator'],'p',2);}
+  if(include_confirm){add_confirm(body,['Evaluator','Administrator'],'p',3);}
 
   return doc_postprocess(doc,out_pdf)
 
 }
 
-function gen_db(doc_in = undefined,out_doc = true,out_pdf = true,include_confirm = false){
+function gen_db(doc_in = null,out_doc = true,out_pdf = true,include_confirm = false){
   var c = new Core();
   c.parse();
 
@@ -593,8 +607,8 @@ function gen_db(doc_in = undefined,out_doc = true,out_pdf = true,include_confirm
   var t_prbs_header = body.appendTable(a_prbs_header);
   var t_prbs        = body.appendTable(a_prbs);
 
-  var st_prbs_header = table_set_style(t_prbs_header, cw_prbs_header,8,undefined,false,[2,1,1,1])
-  var st_prbs        = table_set_style(t_prbs       , cw_prbs       ,8,undefined,false,[2,1,1,1])
+  var st_prbs_header = table_set_style(t_prbs_header, cw_prbs_header,8,null,false,[2,1,1,1])
+  var st_prbs        = table_set_style(t_prbs       , cw_prbs       ,8,null,false,[2,1,1,1])
 
   // // Log the attributes.
   // var atts = t_prbs_header.getRow(0).getAttributes();
@@ -631,15 +645,15 @@ function gen_db(doc_in = undefined,out_doc = true,out_pdf = true,include_confirm
   var t_names_header = body.appendTable(a_names_header);
   var t_names        = body.appendTable(a_names);
 
-  var st_names_header = table_set_style(t_names_header, cw_names_header,8,undefined,false,[2,1,1,1])
-  var st_names        = table_set_style(t_names       , cw_names       ,8,undefined,false,[2,1,1,1])
+  var st_names_header = table_set_style(t_names_header, cw_names_header,8,null,false,[2,1,1,1])
+  var st_names        = table_set_style(t_names       , cw_names       ,8,null,false,[2,1,1,1])
 
   if(include_confirm){add_confirm(body,["Evaluator","Administrator"],"l",2);}
 
   return doc_postprocess(doc,out_pdf)
 }
 
-function gen_sel(doc_in = undefined,out_doc = true, out_pdf = true,include_confirm = false){
+function gen_sel(doc_in = null,out_doc = true, out_pdf = true,include_confirm = false){
   var sel = new Select();
   sel.parse(0);
 
@@ -662,7 +676,7 @@ function gen_sel(doc_in = undefined,out_doc = true, out_pdf = true,include_confi
 
   var t_sel = body.appendTable(a_sel);
   var cw_sel = [20,130].concat(Array(sel.sel_pf_nums.length).fill(30));
-  var st_sel = table_set_style(t_sel,cw_sel,10,undefined,true);
+  var st_sel = table_set_style(t_sel,cw_sel,10,null,true);
 
   if(include_confirm){add_confirm(body,['Administrator'],'p',2);}
 
