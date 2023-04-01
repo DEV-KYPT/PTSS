@@ -66,17 +66,9 @@ function is_new(){ //check if internal init is done in current document (true if
 
 function init_internal(){
   Logger.log("Internal Initialization Called at: "+get_now());
-  const ss_name = `[${get_full_name()}] PTSS ${VERSION}`;
 
-  var root_name = null;
-  if(get_prop_value('status','d') == 'SOURCE'){root_name = `[${get_full_name()}] ${VERSION}`}
-  else                                        {root_name = `[${get_full_name()}] Scoring System ${VERSION}`}
-  
+  // [01] Set data in "META" spreadsheet correctly into PropertiesService
   var ss = get_ss_spreadsheet();
-  ss.rename(ss_name);
-
-  var root_folder = DriveApp.getFileById(get_prop_value('root-id','d'))
-  root_folder.setName(root_name);
 
   var prop_raw = ss.getRange("META_PROP").getValues();
   // Logger.log(prop_raw)
@@ -84,9 +76,9 @@ function init_internal(){
   var props_d = {}
   var props_u = {}
   for(var entry of prop_raw){
-    if(entry[0]=="s"){props_s[entry[1]]=entry[2]}
-    if(entry[0]=="d"){props_d[entry[1]]=entry[2]}
-    if(entry[0]=="u"){props_u[entry[1]]=entry[2]}
+    if(entry[0]=="s"){props_s[entry[1]]=String(entry[2])}
+    if(entry[0]=="d"){props_d[entry[1]]=String(entry[2])}
+    if(entry[0]=="u"){props_u[entry[1]]=String(entry[2])}
   }
   // props_d["category"]=String(ss.getRange("META_CATEGORY").getValue());
   // props_d["callname"]=String(ss.getRange("META_CALLNAME").getValue());
@@ -98,7 +90,19 @@ function init_internal(){
   set_props(props_d,"d")
   set_props(props_u,"u")
 
-  // also propagate version information backwards (useful redundancy for working with SOURCE).
+  // [02] set scoring system name /  folder name properly
+  const ss_name = `[${get_full_name()}] PTSS ${VERSION}`;
+
+  var root_name = null;
+  if(get_prop_value('status','d') == 'SOURCE'){root_name = `[${get_full_name()}] ${VERSION}`}
+  else                                        {root_name = `[${get_full_name()}] Scoring System ${VERSION}`}
+  
+  ss.rename(ss_name);
+
+  var root_folder = DriveApp.getFileById(get_prop_value('root-id','d'))
+  root_folder.setName(root_name);
+
+  // [03] also propagate version information backwards (useful redundancy for working with SOURCE).
   ss.getRange("META_VERSION").setValue(VERSION);
   ss.rename(`[${get_full_name()}] PTSS ${VERSION}`)
 

@@ -494,7 +494,7 @@ function ui_unhide_sheets(){
   var ui = get_ui();
   if(!check_cred("UTIL")){ui.alert("Unauthorized.");return false;}
 
-  var show_except = ["FINAL","EX_DATA","EX_JURY"];
+  var show_except = ["FINAL","EX_DATA","EX_JURY","EX_ADDITIONAL","EX_FINAL"];
   var ss = get_ss_spreadsheet();
 
   for(var sheet of ss.getSheets()){
