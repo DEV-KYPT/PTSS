@@ -88,14 +88,9 @@ function main(){
   // var rangelist = get_ss_spreadsheet().getSheetByName("FINAL").getRangeList(uin);
   // rangelist.activate();
   // rangelist.setValue("UIN")
-  Logger.log(undefined == null)
+
+  // Logger.log(get_nr("DATA").map((a)=>a.getName()));
 }
-
-
-
-
-
-
 
 
 

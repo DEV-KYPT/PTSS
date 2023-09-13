@@ -595,7 +595,11 @@ class Challenge{
 
   parse(lv = 0,raw = null,verbose = false){
     if(this.raw == null){ // use getRange / getValues if failed to get this.raw from cache.
-      if(raw == null){this.raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`).getValues();}
+      if(raw == null){
+        this.raw = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`).getValues();
+        Logger.log(`[PARSE] replacing null raw with NR: DATA_P${this.pf_num}R${this.rm_num}_S${this.st_num}`);
+        Logger.log(this.raw);
+      }
       else{this.raw = raw;}
     }
     this.rep_team = this.raw[2][2].toString();
@@ -619,7 +623,7 @@ class Challenge{
     this.rej = this.raw[1-1].slice(6-1,16-1+1).map(str => Number(str)).filter(num => num != 0);
     this.acc = this.raw[1-1][18-1];
 
-    this.select = (raw[6][0] != "");
+    this.select = (this.raw[6][0] != "");
 
     if(this.select){
       this.rej = [];

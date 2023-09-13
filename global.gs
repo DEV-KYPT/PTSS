@@ -45,12 +45,13 @@ function get_milisec(){
  * [global] Fetches all named ranges (type:namedRange) with specified name and exactness
  * 
  */
-function get_nr(name = null,name2 = null,exact = false) {
+function get_nr(name = "",name2 = "",exact = false) {
   var nr_raw = SpreadsheetApp.getActive().getNamedRanges();
-  // Logger.log(nr_raw)
+  // Logger.log(nr_raw.map((a)=>a.getName()));
   var nrs = [];
-  if(name == null){return nr_raw;}
+  if(name == ""){return nr_raw;}
   for(var nr of nr_raw){
+    // Logger.log(nr.getName());
     if(exact){if(nr.getName()==name){return nr;}}
     else if(nr.getName().includes(name) && nr.getName().includes(name2)){
       nrs.push(nr)

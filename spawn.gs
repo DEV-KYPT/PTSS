@@ -156,11 +156,13 @@ function spawn(ss = get_ss_spreadsheet(),sheet_data = null, pfs = null, rms = nu
   // copy&paste format and content + add named ranges based on unit_nrs_specs
   for(let [prefix,origin] of Object.entries(origins)){
     // copy named ranges
+    Logger.log(`[SPAWN]NR SPECS: ${unit_nrs_specs}`)
     for(let [name,spec] of Object.entries(unit_nrs_specs)){
       var full_name = prefix+name
       var range     = sheet_data.getRange(origin[0]+spec[0],origin[1]+spec[1],spec[2],spec[3])
       // Logger.log(full_name);
       // Logger.log([origin[0]+spec[0],origin[1]+spec[1],spec[2],spec[3]])
+      Logger.log(`[SPAWN] Creating named range for [${full_name}]: ${range.getA1Notation()}`)
       ss.setNamedRange(full_name,range);
     }
 
@@ -190,12 +192,15 @@ function unspawn(ss = get_ss_spreadsheet(),sheet_data = ss.getSheetByName("DATA"
 
   if(!is_spawned()){Logger.log("[UNSPAWN] Illegal Unspawn Detected.");return;}
 
+  Logger.log(`[UNSPAWN] Starting Unspawn: UNIT: rows:${unit_rows} cols:${unit_cols}`);
+
   // remove conditional formatting
   sheet_data.setConditionalFormatRules([]);
 
   // delete named ranges
   var nr_data = get_nr("DATA_P");
   nr_data = nr_data.concat(get_nr("DATA_FULL"));
+  Logger.log(`[UNSPAWN] NR Targets set: ${nr_data.map((a) => (a.getName()))}`)
   for(var nr of nr_data){
     if(!(nr.getName().includes(unit_prefix) || nr.getName().includes("EX_"))){
       // Logger.log(nr.getName());
