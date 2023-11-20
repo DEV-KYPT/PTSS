@@ -21,9 +21,9 @@ function main(){
   // Logger.log(r.interpret(2))
   // Logger.log(string_2d(r.st[1].raw,"XXXX",0,true,6))
 
-  // var finr = new Finrm();
-  // finr.parse(1)
-  // Logger.log(finr.interpret(1))
+  var finr = new Finrm();
+  finr.parse(1)
+  Logger.log(finr.interpret(1))
 
   /////////////////////////////////////////////////////////////
   // var s = new St(5,5,3)

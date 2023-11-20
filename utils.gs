@@ -139,8 +139,19 @@ function speedometer(){
   return readout
 }
 
-// 2d array handling
-
+/**
+ * [global] 2d Array handling function (slicing) (0-indexed) (end-inclusive)
+ * @param {array} array - The 2D array to slice
+ * @param {array} idx_s - The "top left coordinates" of the slice (default: [0,0]).
+ * @param {array} idx_e - The "bottom right coordinates" of ths slice (*INCLUSIVE) (default: [array.length-1,array[0].length-1]).
+ * @returns {array} the sliced 2D array
+ *
+ * @example
+ *
+ *    slice_2d([[a,b,c],[d,e,f],[g,h,i]],[1,1],[2,2]) returns [[e,f],[h,i]]
+ *    slice_2d([[a,b,c],[d,e,f],[g,h,i]],undefined,[1,2]) returns [[a,b,c],[d,e,f]]
+ *
+ */
 function slice_2d(array=[[]],idx_s = [0,0],idx_e = [array.length-1,array[0].length-1]){
   return array.slice(idx_s[0],idx_e[0]+1).map(row => row.slice(idx_s[1],idx_e[1]+1))
 }

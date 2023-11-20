@@ -83,7 +83,7 @@ class Tournament { //lv0 (top)
   }
 }
 
-// Class within Tournament defined for pharsing draw ("DRAW") information
+// Class within Tournament defined for parsing draw ("DRAW") information
 class Draw{
   constructor(){
     this.ss = get_ss_spreadsheet();
@@ -293,7 +293,6 @@ class Rm {
 
 }
 
-
 class St {
   constructor(pf_num,rm_num,st_num){
     this.ss = get_ss_spreadsheet();
@@ -356,11 +355,13 @@ class St {
     notations.push(get_a1_notation(origin[0]+0,origin[1]+5 ,1,11)); //rejects
     notations.push(get_a1_notation(origin[0]+2,origin[1]+3 ,3,15)); //content
     notations.push(get_a1_notation(origin[0]+0,origin[1]+17,1,1 )); //accepted
+    notations.push(get_a1_notation(origin[0]-1,origin[1]+7,1,1)); //(secret) Chatbot data
     return notations;
   }
 
 }
 
+// Separate "Room" Level class for parsing FINALS information
 class Finrm{
   constructor(){
     this.ss = get_ss_spreadsheet();
@@ -379,7 +380,6 @@ class Finrm{
 
   parse(lv = 0,raw = null){
     if(this.is_parsed()){return}
-    // Logger.log(`[class337]`)
     if(raw == null){this.raw = this.ss.getRange("FINAL_FULL").getValues();}
     else           {this.raw = raw;}
 
@@ -400,6 +400,11 @@ class Finrm{
     // this.sk = this.ss.getRange(`FINAL_SK`).getValues()[0].filter(e => e != '');
     var [idx_tk_s,idx_tk_e] = this.raw[4][2].split("/").map(s => s.split(",").map(s => Number(s)));
     var [idx_sk_s,idx_sk_e] = this.raw[4][3].split("/").map(s => s.split(",").map(s => Number(s)));
+    // Logger.log(idx_tk_s);
+    // Logger.log(idx_sk_s);
+    // Logger.log(this.raw);
+    // Logger.log(this.raw[idx_tk_s[0]][idx_tk_s[1]]);
+    // Logger.log(slice_2d(this.raw,idx_tk_s,idx_tk_e)[0]);
     this.tk = slice_2d(this.raw,idx_tk_s,idx_tk_e)[0].filter(e=> e != '');
     this.sk = slice_2d(this.raw,idx_sk_s,idx_sk_e)[0].filter(e=> e != '');
 
