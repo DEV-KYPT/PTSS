@@ -319,6 +319,7 @@ function ui_add_staff(){
 
   if(!ui_ask("This script will give access to all affilated staff. Continue?")){ui.alert("Cancelled");return false;}
   // ui_hide_sheets(); // should we automatically hide sheets when inviting staff members?
+  if(!is_spawned()){ui.alert("Spawn this instance and try again");return false;}
   protect_data();
   protect_final();
   repopulate_creds();

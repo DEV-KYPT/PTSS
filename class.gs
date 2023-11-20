@@ -352,10 +352,10 @@ class St {
     var notations = [];
     var origin = this.raw[1][0].split(",").map(e => Number(e));
     // Logger.log(origin);
-    notations.push(get_a1_notation(origin[0]+0,origin[1]+5 ,1,11)); //rejects
-    notations.push(get_a1_notation(origin[0]+2,origin[1]+3 ,3,15)); //content
-    notations.push(get_a1_notation(origin[0]+0,origin[1]+17,1,1 )); //accepted
-    notations.push(get_a1_notation(origin[0]-1,origin[1]+7,1,1)); //(secret) Chatbot data
+    notations.push(get_a1_notation(origin[0]+0,origin[1]+5 ,1 ,11)); //rejects
+    notations.push(get_a1_notation(origin[0]+2,origin[1]+3 ,3 ,15)); //content
+    notations.push(get_a1_notation(origin[0]+0,origin[1]+17,1 ,1 )); //accepted
+    notations.push(get_a1_notation(origin[0]+7,origin[1]-1 ,1 ,1 )); //(secret) Chatbot data
     return notations;
   }
 
