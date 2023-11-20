@@ -216,7 +216,7 @@ class Rm {
     else           {this.raw = raw;}
 
     // this.rm_loc = this.ss.getRange(`DRAW_RM${this.rm_num}`).getValue();
-    this.rm_log = this.raw[2][0]; //!
+    this.rm_loc = this.raw[2][0]; //!
     // this.len_st = this.ss.getRange(`DATA_P${this.pf_num}R${this.rm_num}_LEN`).getValue();
     this.len_st = this.raw[1][2]; //!
 
