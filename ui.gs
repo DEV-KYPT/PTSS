@@ -237,14 +237,14 @@ function ui_init_preprocess(){
   var ui = get_ui();
   if(!check_cred("INIT")){ui.alert("Unauthorized.");return false;}
 
-  if(!ui_ask(`This script will unspawn this instance, and clear all user input fields. Continue?`)){ui.alert("Cancelled");return false;}
+  if(!ui_ask(`This script will unspawn this instance, and clear all user input fields / chat logs. Continue?`)){ui.alert("Cancelled");return false;}
   if(get_prop_value('status','d') != 'SOURCE'){
     if(!ui_ask(`[WARNING] This script is recommended only for SOURCE documents. Continue?`)){ui.alert("Cancelled");return false;}
   }
 
   unspawn_and_clear();
+  remove_all_chat_logs()
   return true;
-
 }
 
 function ui_init_external(){
