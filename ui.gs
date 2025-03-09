@@ -70,6 +70,7 @@ function onOpen(){
       .addItem('Preprocess'             ,`ui_init_preprocess`)
       .addItem('External (new instance)','ui_init_external')
       .addItem('Internal (metadata)'    ,'ui_init_internal')
+      .addItem('Clone','ui_init_clone')
       .addToUi();
   }
 
@@ -270,6 +271,26 @@ function ui_init_internal(){
   if(!check_cred("INIT")){ui.alert("Unauthorized.");return false;}
   
   init_internal();
+  return true;
+}
+
+function ui_init_clone(){
+  var ui = get_ui();
+  if(!check_cred("INIT")){ui.alert("Unauthorized.");return false;}
+
+  if(!is_spawned()){
+    if (!ui_ask("Are you sure you want to clone an unspawned instance?")){ui.alert("Cancelled");return false;}
+  }
+
+  var input = ui_prompt(`Enter Clone Name ([Category-Callname])"`,`"KYPT-2023", "I-YPT-2020", etc.`);
+  if(input == false){ui.alert("Cancelled");return false;}
+  var category = input.split('-')[0];
+  var callname = input.split('-')[1];
+
+  if(!ui_ask(`Clone this Instance to [${category}-${callname}] ?`)){ui.alert("Cancelled");return false;}
+
+  init_clone(category,callname);
+  ui.alert(`Tournament Instance [${category}-${callname}] Successfully Cloned.`)
   return true;
 }
 

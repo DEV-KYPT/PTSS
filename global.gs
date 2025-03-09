@@ -3,7 +3,7 @@
  * [global] The version number.
  * @type {string}
  */
-const VERSION = 'v1.1.2' //all version info's displayed reference this string
+const VERSION = 'v1.2.0' //all version info's displayed reference this string
 
 function get_ui(){
   try{

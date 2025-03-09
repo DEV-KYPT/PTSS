@@ -112,5 +112,66 @@ function init_internal(){
   read_props();
 }
 
-//TODO: Duplicate Capability
+function init_clone(category = get_prop_value("category"),callname = get_prop_value("callname") + `_clone<${get_now()}>`){
+  // CANNOT CALL from SOURCE.
 
+  if(get_prop_value('status','d') == 'SOURCE'){
+    Logger.log("Invalid Duplication Root.")
+    ui.alert("SOURCE cannot be cloned!");
+    return;
+  }
+  Logger.log("TOURNAMENT CLONED : "+category+"-"+callname);
+
+  var ss = get_ss_spreadsheet();
+  var meta_prop_len = ss.getRange("META_PROP").getValues().length
+
+  const ss_name = `[${category}-${callname}] PTSS ${VERSION}`;
+
+  // locate / create folders
+  var origin       = DriveApp.getFolderById(get_prop_value("origin-id"))
+  var new_root     = origin.createFolder(`[${category}-${callname}] Scoring System `+VERSION);
+  var new_result   = new_root.createFolder("RESULT");
+  var new_template = new_root.createFolder("TEMPLATE");
+
+  // copy SOURCE into new root
+  var new_ss_file  = DriveApp.getFileById(get_prop_value("ss-id","d")).makeCopy(ss_name,new_root);
+  var new_ss       = SpreadsheetApp.openById(new_ss_file.getId());
+
+  new_ss_file .setShareableByEditors(false).setSharing(DriveApp.Access.PRIVATE,DriveApp.Permission.NONE);;
+  new_result  .setShareableByEditors(false).setSharing(DriveApp.Access.PRIVATE,DriveApp.Permission.NONE);;
+  new_template.setShareableByEditors(false).setSharing(DriveApp.Access.PRIVATE,DriveApp.Permission.NONE);;
+
+  // new_ss_file.setSharing();
+
+  // populate metadata for new sheet.
+  var ext_props = [
+    ['d','status'      ,`[${category}-${callname}] cloned from <${get_prop_value("status")}> at [${get_now()}]`],
+    ['d','category'    ,category], //!! this has to be the second line!
+    ['d','callname'    ,callname], //!! this has to be the third line!
+    ['d','ss-id'       ,new_ss_file.getId()],
+    ['d','ss-url'      ,new_ss_file.getUrl()],
+    ['d','root-id'     ,new_root.getId()],
+    ['d','root-url'    ,new_root.getUrl()],
+    ['d','origin-id'   ,origin.getId()],
+    ['d','origin-url'  ,origin.getUrl()],
+    ['d','template-id' ,new_template.getId()],
+    ['d','template-url',new_template.getUrl()],
+    ['d','result-id'   ,new_result.getId()],
+    ['d','result-url'  ,new_result.getUrl()],
+    ['s','developers'  ,"iamchoking247;korea.kypt"],
+    ['s','register'    ,'{}']
+    // ['d','',],    
+  ]
+
+  // resize value array with blanks
+  while(ext_props.length < meta_prop_len){ext_props.push(['','',''])}
+
+  new_ss.getRange("META_PROP").setValues(ext_props)
+
+  // also populate version & name information
+  new_ss.getRange("META_CATEGORY").setValue(category)
+  new_ss.getRange("META_CALLNAME").setValue(callname)
+
+  Logger.log("EXTERNAL INITIALIZATION SUCCESSFUL. NEW TOURNAMENT CREATED");
+  
+}
